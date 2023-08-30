@@ -45,7 +45,7 @@ end
 
 Update world state
 """
-function world_step(world_state::WorldState, agents::Array{AgentState, 1}, builder::Gtk.GtkBuilderLeaf, headless::Bool=false)
+function world_step(world_state::WorldState, agents::Array{AgentState, 1})
     updated_world_state = WorldState(world_state.nodes, world_state.map, world_state.paths, world_state.time + 1, world_state.done)
     return true, updated_world_state
 end
