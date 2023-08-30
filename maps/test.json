@@ -1,0 +1,48 @@
+{
+	"1": {
+		"label": "",
+		"position": {
+			"x": 5,
+			"y": 5
+		},
+		"neighbours": [2, 3],
+		"values": ""
+	},
+	"2": {
+		"label": "",
+		"position": {
+			"x": 10,
+			"y": 5
+		},
+		"neighbours": [1, 4],
+		"values": ""
+	},
+	"3": {
+		"label": "",
+		"position": {
+			"x": 5,
+			"y": 10
+		},
+		"neighbours": [1, 4],
+		"values": ""
+	},
+	"4": {
+		"label": "",
+		"position": {
+			"x": 10,
+			"y": 10
+		},
+		"neighbours": [2, 3, 5],
+		"values": ""
+	},
+	"5": {
+		"label": "",
+		"position": {
+			"x": 10,
+			"y": 15
+		},
+		"neighbours": [4],
+		"values": ""
+	}
+					
+}
