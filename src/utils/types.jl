@@ -15,7 +15,7 @@ abstract type AbstractAction end
 
 struct WaitAction <: AbstractAction
     field::Nothing
-    
+
     function WaitAction()
         new(nothing)
     end
@@ -55,6 +55,11 @@ struct Node
     end
 end
 
+
+"""
+Make WorldState mutable at your peril! This simulator is only guaranteed thread-safe if WorldState is immutable,
+thus allowing multiple agents in multiple threads to safely read it simultaneously
+"""
 struct WorldState
     nodes::Array{Node, 1}
     map::AbstractGraph

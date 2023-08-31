@@ -2,10 +2,11 @@ include("src/utils/include.jl")
 
 import .Types: WorldState, AgentState
 import .World: create_world, world_step, stop_world
-import .Agent: create_agent, agent_step!
+# import .Agent: create_agent, agent_step!
 import .WorldRenderer: create_window, update_window!, close_window
+import .AgentHandler: spawn_agents, step_agents!
 
-# TODO agent handler/parallelisation, agent logging, world logging, headless mode, message passer, Python wrapper
+# TODO [agent logging, world logging, message passer, observation layer]defaults, Python wrapper
 # Then commit as v1.0, write some docs, and start looking at what's needed to make eg. patrolling work
 function main()
 
@@ -15,8 +16,8 @@ function main()
     end
 
     world = create_world("maps/test.json")
-    agents = [create_agent(world, 1)]
-    speedup = 2.0
+    agents = spawn_agents(4, [1, 2, 3, 4], world)
+    speedup = 10.0
     ts = 1/speedup
     actual_speedup = speedup
     gtk_running = true
@@ -24,9 +25,7 @@ function main()
     for _ in 1:10000
         t = @elapsed begin
             world_running, world = world_step(world, agents)
-            for agent in agents
-                agent_step!(agent, world)
-            end
+            step_agents!(agents, world)
             if !headless
                 gtk_running = update_window!(world, agents, actual_speedup, builder)
             end
