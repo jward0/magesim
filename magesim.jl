@@ -6,7 +6,7 @@ import .World: create_world, world_step, stop_world
 import .WorldRenderer: create_window, update_window!, close_window
 import .AgentHandler: spawn_agents, step_agents!
 
-# TODO [agent logging, world logging, message passer, observation layer]defaults, Python wrapper
+# TODO [agent logging, world logging]defaults, Python wrapper, run from config
 # Then commit as v1.0, write some docs, and start looking at what's needed to make eg. patrolling work
 function main()
 

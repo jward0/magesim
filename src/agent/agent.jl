@@ -1,24 +1,9 @@
 module Agent
 
-import ..Types: AgentState, WorldState, Position, AbstractAction, WaitAction, MoveToAction, StepTowardsAction
+import ..Types: AgentState, WorldState, Position, AbstractAction, WaitAction, MoveToAction, StepTowardsAction, StringMessage, AgentObservation
 import ..AgentDynamics: calculate_next_position
 
 using DataStructures
-
-"""
-    create_agent(world::WorldState, start_node::Int64)
-
-+++Temporary function until I get agent handler written+++
-"""
-function create_agent(id::Int64, start_position::Position, start_node::Int64)
-    
-    values = nothing
-
-    agent = AgentState(id, start_node, start_position, values)
-    enqueue!(agent.action_queue, WaitAction())
-
-    return agent
-end
 
 """
     agent_step!(agent::AgentState, world::WorldState)
@@ -27,9 +12,9 @@ Select and perform an action and update agent position and stat accordingly
 """
 function agent_step!(agent::AgentState, world::WorldState)
 
-    # Modify action queue
+    # Wait if no other action found
     if isempty(agent.action_queue)
-        enqueue!(agent.action_queue, MoveToAction(rand(1:5)))
+        enqueue!(agent.action_queue, WaitAction())
     end
 
     # Do action from queue
@@ -59,6 +44,36 @@ function agent_step!(agent::AgentState, world::WorldState)
         dequeue!(agent.action_queue)
     end
 
+end
+
+"""
+    observe_world!(agent::AgentState, world::WorldState)
+
+Extract an agent's observation from the true world state and update the agent's belief of the
+world state, and generate messages to send to other agents
+"""
+function observe_world!(agent::AgentState, world::WorldState)
+    agent.observation = AgentObservation(world)
+    agent.world_state_belief = world
+
+    enqueue!(agent.outbox, StringMessage(agent, nothing, string(agent.id)))
+end
+
+"""
+    make_decisions!(agent::AgentState)
+
+Read messages and modify agent's action queue based on received messages, world state belief, and 
+internal values
+"""
+function make_decisions!(agent::AgentState)
+
+    while !isempty(agent.inbox)
+        message = dequeue!(agent.inbox)
+    end
+
+    if !isnothing(agent.world_state_belief)
+        enqueue!(agent.action_queue, MoveToAction(rand(1:length(agent.world_state_belief.nodes))))
+    end
 end
 
 end

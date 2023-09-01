@@ -1,6 +1,12 @@
 module Types
 
-using Graphs, DataStructures
+using Graphs, DataStructures, Infinity
+
+# --- Abstract types ---
+
+abstract type AbstractMessage end
+
+abstract type AbstractAction end
 
 # --- General utility types ---
 
@@ -10,8 +16,6 @@ struct Position
 end
 
 # --- Agent action types ---
-
-abstract type AbstractAction end
 
 struct WaitAction <: AbstractAction
     field::Nothing
@@ -88,6 +92,10 @@ struct AgentValues
     example_value::Nothing
 end
 
+struct AgentObservation
+    observation::WorldState
+end
+
 mutable struct AgentState
     id::Integer
     position::Position
@@ -95,10 +103,28 @@ mutable struct AgentState
     action_queue::Queue{AbstractAction}
     graph_position::Union{AbstractEdge, Int64}
     step_size::Float64
+    comm_range::Float64
+    inbox::Queue{AbstractMessage}
+    outbox::Queue{AbstractMessage}
+    world_state_belief::Union{WorldState, Nothing}
+    observation::Union{AgentObservation, Nothing}
 
     function AgentState(id::Int64, start_node_idx::Int64, start_node_pos::Position, values::Nothing)
 
-        new(id, start_node_pos, AgentValues(values), Queue{AbstractAction}(), start_node_idx, 1.0)    
+        new(id, start_node_pos, AgentValues(values), Queue{AbstractAction}(), start_node_idx, 1.0, ∞, Queue{AbstractMessage}(), Queue{AbstractMessage}(), nothing)    
+    end
+end
+
+# --- Message types ---
+
+struct StringMessage <: AbstractMessage
+    source::Int64
+    targets::Union{Array{Int64, 1}, Nothing}
+    message::String
+
+    function StringMessage(agent::AgentState, targets::Union{Array{Int64, 1}, Nothing}, message::String)
+
+        new(agent.id, targets, message)
     end
 end
 
