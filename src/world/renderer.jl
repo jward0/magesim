@@ -6,7 +6,7 @@ gr()
 
 const canvas = GtkCanvas()
 const io = PipeBuffer()
-running = true
+running::Bool = true
 
 
 """

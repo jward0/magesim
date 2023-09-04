@@ -41,9 +41,9 @@ end
 
 
 """
-    world_step(world_state::WorldState, agents::Array{AgentState, 1}, builder::Gtk.GtkBuilderLeaf)
+    world_step(world_state::WorldState, agents::Array{AgentState, 1})
 
-Update world state
+Return updated world state
 """
 function world_step(world_state::WorldState, agents::Array{AgentState, 1})
     updated_world_state = WorldState(world_state.nodes, world_state.map, world_state.paths, world_state.time + 1, world_state.done)
@@ -51,7 +51,7 @@ function world_step(world_state::WorldState, agents::Array{AgentState, 1})
 end
 
 """
-    stop_world(builder::Gtk.GtkBuilderLeaf)
+    stop_world()
 
 Safely stop the simulation and close the GUI
 """

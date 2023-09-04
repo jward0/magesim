@@ -15,6 +15,10 @@ struct Position
     y::Float64
 end
 
+struct Logger
+    log_directory::String
+end
+
 # --- Agent action types ---
 
 struct WaitAction <: AbstractAction
@@ -36,7 +40,7 @@ end
 # --- Node + map types
 
 struct NodeValues
-    example_value::String
+    value_string::String
 end
 
 struct Node

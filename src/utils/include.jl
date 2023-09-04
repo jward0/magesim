@@ -1,5 +1,6 @@
 include("types.jl")
 include("util_functions.jl")
+include("logger.jl")
 include("../agent/dynamics.jl")
 include("../agent/agent.jl")
 include("../world/renderer.jl")
