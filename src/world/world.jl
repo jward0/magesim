@@ -39,7 +39,6 @@ function create_world(fpath::String)
     return world_state
 end
 
-
 """
     world_step(world_state::WorldState, agents::Array{AgentState, 1})
 

@@ -5,25 +5,26 @@ import .World: create_world, world_step, stop_world
 import .LogWriter: log, new_logger
 import .WorldRenderer: create_window, update_window!, close_window
 import .AgentHandler: spawn_agents, step_agents!
+import .ConfigLoader: load_config
 
-# TODO Python wrapper, run from config
+# TODO Python wrapper, run from config, LOS checker with image layer
 # Then commit as v1.0, write some docs, and start looking at what's needed to make eg. patrolling work
-function main()
+function main(args)
 
-    headless = false
+    headless, world_fpath, n_agents, agent_starts, speedup, timeout = load_config(args)
+
     if !headless
         builder = create_window()
     end
 
-    world = create_world("maps/test.json")
-    agents = spawn_agents(4, [1, 2, 3, 4], world)
-    speedup = 10.0
+    world = create_world(world_fpath)
+    agents = spawn_agents(n_agents, agent_starts, world)
     ts = 1/speedup
     actual_speedup = speedup
     gtk_running = true
     logger = new_logger()
 
-    for step in 1:10000
+    for step in 1:timeout
         t = @elapsed begin
             world_running, world = world_step(world, agents)
             step_agents!(agents, world)
@@ -54,4 +55,4 @@ function main()
 
 end
 
-main()
+main(ARGS)
