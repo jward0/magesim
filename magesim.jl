@@ -1,13 +1,13 @@
 include("src/utils/include.jl")
 
-import .Types: WorldState, AgentState, Logger
+import .Types: WorldState, AgentState, Logger, DummyNode
 import .World: create_world, world_step, stop_world
 import .LogWriter: log, new_logger
 import .WorldRenderer: create_window, update_window!, close_window
 import .AgentHandler: spawn_agents, step_agents!
 import .ConfigLoader: load_config
 
-# TODO Python wrapper, LOS checker with image layer
+# TODO Generate map JSON from data, Move to next action once target reached (maybe?), Ghost nodes, Python wrapper, LOS checker with image layer
 # Then commit as v1.0, write some docs, and start looking at what's needed to make eg. patrolling work
 function main(args)
 
@@ -33,7 +33,9 @@ function main(args)
             end
             log(world, logger, step)
             for node in world.nodes
-                log(node, logger, step)
+                if !(node isa DummyNode)
+                    log(node, logger, step)
+                end
             end
             for agent in agents
                 log(agent, logger, step)

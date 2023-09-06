@@ -1,6 +1,6 @@
 module World
 
-import ..Types: WorldState, AgentState, Node
+import ..Types: WorldState, AgentState, Node, DummyNode, AbstractNode
 import ..WorldRenderer: create_window, update_window!, close_window, gtk_is_running
 import ..Utils: pos_distance
 using Gtk
@@ -14,10 +14,18 @@ Load world info from JSON file, construct node and map representations, and retu
 """
 function create_world(fpath::String)
     nodes_dict = JSON.parsefile(fpath)
-    nodes = Array{Node, 1}(undef, length(nodes_dict))
+    nodes = Array{AbstractNode, 1}(undef, length(nodes_dict))
+
+    n_nodes::Int = 0
 
     for (strid, node) in nodes_dict
-        nodes[parse(Int, strid)] = Node(strid, node)
+        id = parse(Int, strid)
+        if id < 0
+            nodes[length(nodes_dict) + id + 1] = DummyNode(string(length(nodes_dict) + id + 1), node)
+        else
+            n_nodes +=1
+            nodes[id] = Node(strid, node)
+        end
     end
     
     sources = Vector{Int64}()
@@ -26,7 +34,11 @@ function create_world(fpath::String)
 
     for node in nodes
         for n in node.neighbours
-            neighbour = nodes[n]
+            if n < 0
+                neighbour = nodes[length(nodes_dict) + n + 1]
+            else
+                neighbour = nodes[n]
+            end
             push!(sources, node.id)
             push!(destinations, neighbour.id)
             push!(weights, pos_distance(node.position, neighbour.position))
@@ -35,7 +47,7 @@ function create_world(fpath::String)
 
     graph_map = SimpleWeightedDiGraph(sources, destinations, weights)
 
-    world_state = WorldState(nodes, graph_map)
+    world_state = WorldState(nodes, n_nodes, graph_map)
     return world_state
 end
 
@@ -45,7 +57,7 @@ end
 Return updated world state
 """
 function world_step(world_state::WorldState, agents::Array{AgentState, 1})
-    updated_world_state = WorldState(world_state.nodes, world_state.map, world_state.paths, world_state.time + 1, world_state.done)
+    updated_world_state = WorldState(world_state.nodes, world_state.n_nodes, world_state.map, world_state.paths, world_state.time + 1, world_state.done)
     return true, updated_world_state
 end
 

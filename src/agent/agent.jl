@@ -72,7 +72,7 @@ function make_decisions!(agent::AgentState)
     end
 
     if !isnothing(agent.world_state_belief)
-        enqueue!(agent.action_queue, MoveToAction(rand(1:length(agent.world_state_belief.nodes))))
+        enqueue!(agent.action_queue, MoveToAction(rand(1:agent.world_state_belief.n_nodes)))
     end
 end
 

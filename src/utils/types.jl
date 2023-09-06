@@ -8,6 +8,8 @@ abstract type AbstractMessage end
 
 abstract type AbstractAction end
 
+abstract type AbstractNode end
+
 # --- General utility types ---
 
 struct Position
@@ -43,7 +45,23 @@ struct NodeValues
     value_string::String
 end
 
-struct Node
+struct DummyNode <: AbstractNode
+    id::Integer
+    position::Position
+    neighbours::Array{Integer, 1}
+
+    function DummyNode(strid::String, node_dict::Dict{String, Any})
+
+        id = parse(Int64, strid)
+        position = Position(node_dict["position"]["x"], 
+                            node_dict["position"]["y"])
+        neighbours = node_dict["neighbours"]
+
+        new(id, position, neighbours)
+    end
+end
+
+struct Node <: AbstractNode
     id::Integer
     label::String
     position::Position
@@ -69,13 +87,15 @@ Make WorldState mutable at your peril! This simulator is only guaranteed thread-
 thus allowing multiple agents in multiple threads to safely read it simultaneously
 """
 struct WorldState
-    nodes::Array{Node, 1}
+    nodes::Array{AbstractNode, 1}
+    n_nodes::Int
     map::AbstractGraph
     paths::Graphs.AbstractPathState  # Has fields dists, parents (for back-to-front navigation)
     time::Real
     done::Bool
     
-    function WorldState(nodes::Array{Node, 1}, 
+    function WorldState(nodes::Array{AbstractNode, 1},
+                        n_nodes::Int,
                         map::AbstractGraph, 
                         paths::Union{Graphs.AbstractPathState, Nothing}=nothing, 
                         time::Float64=0.0, 
@@ -83,9 +103,9 @@ struct WorldState
 
         if paths === nothing
             generated_paths = floyd_warshall_shortest_paths(map)
-            new(nodes, map, generated_paths, time, done)
+            new(nodes, n_nodes, map, generated_paths, time, done)
         else
-            new(nodes, map, paths, time, done)
+            new(nodes, n_nodes, map, paths, time, done)
         end
     end
 end
@@ -115,7 +135,7 @@ mutable struct AgentState
 
     function AgentState(id::Int64, start_node_idx::Int64, start_node_pos::Position, values::Nothing)
 
-        new(id, start_node_pos, AgentValues(values), Queue{AbstractAction}(), start_node_idx, 1.0, ∞, Queue{AbstractMessage}(), Queue{AbstractMessage}(), nothing)    
+        new(id, start_node_pos, AgentValues(values), Queue{AbstractAction}(), start_node_idx, 10.0, ∞, Queue{AbstractMessage}(), Queue{AbstractMessage}(), nothing)    
     end
 end
 

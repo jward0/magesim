@@ -51,7 +51,8 @@ function update_window!(world_state::WorldState, agents::Array{AgentState, 1}, a
         # Draw graph
         graphplot(world_state.map, 
             curves=false, 
-            nodesize=1, 
+            # nodesize=maximum([maximum(node_xs), maximum(node_ys)])/100, 
+            nodesize=0,
             x=node_xs, 
             y=node_ys, 
             xlims=(-5, maximum(node_xs)+5), 
@@ -61,7 +62,8 @@ function update_window!(world_state::WorldState, agents::Array{AgentState, 1}, a
             ticks=:none, 
             legend=false)
         # Draw agents and nodes
-        show(io, MIME("image/png"), scatter!(agent_xs, agent_ys))
+        scatter!(node_xs[1:world_state.n_nodes], node_ys[1:world_state.n_nodes], z_order=100, markercolor=:red)
+        show(io, MIME("image/png"), scatter!(agent_xs, agent_ys, z_order=101, markercolor=:blue))
         img = read_from_png(io)
         set_source_surface(ctx, img, 0, 0)
         paint(ctx)

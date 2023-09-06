@@ -1,5 +1,5 @@
 {
-	"world_file": "test.json",
+	"world_file": "example.json",
 	"headless": false,
 	"n_agents": 4,
 	"agent_starts": [1, 2, 3, 4],
