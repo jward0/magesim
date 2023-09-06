@@ -7,7 +7,7 @@ import .WorldRenderer: create_window, update_window!, close_window
 import .AgentHandler: spawn_agents, step_agents!
 import .ConfigLoader: load_config
 
-# TODO Python wrapper, run from config, LOS checker with image layer
+# TODO Python wrapper, LOS checker with image layer
 # Then commit as v1.0, write some docs, and start looking at what's needed to make eg. patrolling work
 function main(args)
 
