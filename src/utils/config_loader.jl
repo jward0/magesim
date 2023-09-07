@@ -17,8 +17,9 @@ function load_config(args::Vector{String})
     agent_starts::Array{Int64, 1} = convert(Array{Int64, 1}, config["agent_starts"])
     speedup::Float64 = convert(Float64, config["speedup"])
     timeout::Int64 = config["timeout"]
+    multithreaded::Bool = config["multithreaded"]
 
-    return headless, world_fpath, n_agents, agent_starts, speedup, timeout
+    return headless, world_fpath, n_agents, agent_starts, speedup, timeout, multithreaded
 end
 
 end

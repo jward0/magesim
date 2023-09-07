@@ -62,8 +62,8 @@ function update_window!(world_state::WorldState, agents::Array{AgentState, 1}, a
             ticks=:none, 
             legend=false)
         # Draw agents and nodes
-        scatter!(node_xs[1:world_state.n_nodes], node_ys[1:world_state.n_nodes], z_order=100, markercolor=:red)
-        show(io, MIME("image/png"), scatter!(agent_xs, agent_ys, z_order=101, markercolor=:blue))
+        scatter!(node_xs[1:world_state.n_nodes], node_ys[1:world_state.n_nodes], markercolor=:red)
+        show(io, MIME("image/png"), scatter!(agent_xs, agent_ys, markercolor=:blue))
         img = read_from_png(io)
         set_source_surface(ctx, img, 0, 0)
         paint(ctx)

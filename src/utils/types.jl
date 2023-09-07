@@ -135,7 +135,7 @@ mutable struct AgentState
 
     function AgentState(id::Int64, start_node_idx::Int64, start_node_pos::Position, values::Nothing)
 
-        new(id, start_node_pos, AgentValues(values), Queue{AbstractAction}(), start_node_idx, 10.0, ∞, Queue{AbstractMessage}(), Queue{AbstractMessage}(), nothing)    
+        new(id, start_node_pos, AgentValues(values), Queue{AbstractAction}(), start_node_idx, 1.0, ∞, Queue{AbstractMessage}(), Queue{AbstractMessage}(), nothing)    
     end
 end
 

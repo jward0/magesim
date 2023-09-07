@@ -7,11 +7,11 @@ import .WorldRenderer: create_window, update_window!, close_window
 import .AgentHandler: spawn_agents, step_agents!
 import .ConfigLoader: load_config
 
-# TODO Generate map JSON from data, Move to next action once target reached (maybe?), Ghost nodes, Python wrapper, LOS checker with image layer
+# TODO Move to next action once target reached (maybe?), Python wrapper, LOS checker with image layer
 # Then commit as v1.0, write some docs, and start looking at what's needed to make eg. patrolling work
 function main(args)
 
-    headless, world_fpath, n_agents, agent_starts, speedup, timeout = load_config(args)
+    headless, world_fpath, n_agents, agent_starts, speedup, timeout, multithreaded = load_config(args)
 
     if !headless
         builder = create_window()
@@ -27,7 +27,7 @@ function main(args)
     for step in 1:timeout
         t = @elapsed begin
             world_running, world = world_step(world, agents)
-            step_agents!(agents, world)
+            step_agents!(agents, world, multithreaded)
             if !headless
                 gtk_running = update_window!(world, agents, actual_speedup, builder)
             end

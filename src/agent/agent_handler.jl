@@ -26,20 +26,37 @@ end
 Modify action queues, step once through movement dynamics, generate observations, and pass 
 messages between agents   
 """
-function step_agents!(agents::Array{AgentState, 1}, world::WorldState)
+function step_agents!(agents::Array{AgentState, 1}, world::WorldState, multithreaded::Bool = true)
 
     # Note that WorldState MUST be immutable for this to guarantee thread-safety for custom user code
+    # These are intentionally in subsequent loops (multithreaded performance would be improved by having
+    # a single loop instead) as users may wish to insert message-passing steps between steps, and the
+    # seperate loops give an easy way to achieve synchronicity
 
-    Threads.@threads for agent in agents
-        make_decisions!(agent)
-    end
-
-    Threads.@threads for agent in agents
-        agent_step!(agent, world)
-    end
-
-    Threads.@threads for agent in agents
-        observe_world!(agent, world)
+    if multithreaded
+        Threads.@threads for agent in agents
+            make_decisions!(agent)
+        end
+    
+        Threads.@threads for agent in agents
+            agent_step!(agent, world)
+        end
+    
+        Threads.@threads for agent in agents
+            observe_world!(agent, world)
+        end
+    else
+        for agent in agents
+            make_decisions!(agent)
+        end
+    
+        for agent in agents
+            agent_step!(agent, world)
+        end
+    
+        for agent in agents
+            observe_world!(agent, world)
+        end   
     end
 
     pass_messages!(agents)

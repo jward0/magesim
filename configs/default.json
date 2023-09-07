@@ -4,5 +4,6 @@
 	"n_agents": 4,
 	"agent_starts": [1, 2, 3, 4],
 	"speedup": 10,
-	"timeout": 1000
+	"timeout": 1000,
+	"multithreaded": true
 }
