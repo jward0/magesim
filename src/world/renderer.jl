@@ -1,7 +1,7 @@
 module WorldRenderer
 
 import ..Types: WorldState, AgentState
-using Gtk, Cairo, Plots, GraphRecipes, Graphs
+using Gtk, Cairo, Plots, GraphRecipes, Graphs, Images
 gr()
 
 const canvas = GtkCanvas()
@@ -35,7 +35,7 @@ end
 
 Set GUI elements and draw canvas based on current world and agents state
 """
-function update_window!(world_state::WorldState, agents::Array{AgentState, 1}, actual_speedup::Float64, builder::Gtk.GtkBuilderLeaf)
+function update_window!(world_state::WorldState, obstacle_map, agents::Array{AgentState, 1}, actual_speedup::Float64, builder::Gtk.GtkBuilderLeaf)
     timer = builder["timelabel"]
     GAccessor.text(timer, string(world_state.time))
     speedup = builder["speeduplabel"]
@@ -45,22 +45,36 @@ function update_window!(world_state::WorldState, agents::Array{AgentState, 1}, a
     node_ys = [node.position.y for node in world_state.nodes]
     agent_xs = [agent.position.x for agent in agents]
     agent_ys = [agent.position.y for agent in agents]
-    
+
     @guarded draw(canvas) do widget
         ctx = getgc(canvas)
+
+        if !isnothing(obstacle_map)
+            lower_lims = (0, 0)
+            upper_lims = size(obstacle_map)
+        else
+            lower_lims = (minimum(node_ys)-5, minimum(node_xs)-5)
+            upper_lims = (maximum(node_ys)+5, maximum(node_xs)+5)
+        end
+
         # Draw graph
         graphplot(world_state.map, 
-            curves=false, 
-            # nodesize=maximum([maximum(node_xs), maximum(node_ys)])/100, 
-            nodesize=0,
-            x=node_xs, 
-            y=node_ys, 
-            xlims=(-5, maximum(node_xs)+5), 
-            ylims=(-5, maximum(node_ys)+5), 
-            aspect_ratio = :equal, 
-            framestyle=:box, 
-            ticks=:none, 
-            legend=false)
+        curves=false, 
+        nodesize=0,
+        x=node_xs, 
+        y=node_ys, 
+        xlims=(lower_lims[2], upper_lims[2]), 
+        ylims=(lower_lims[1], upper_lims[1]), 
+        aspect_ratio = :equal, 
+        framestyle=:box, 
+        ticks=:none, 
+        legend=false)
+
+        # Render obstacle layer (if present)
+        if !isnothing(obstacle_map)
+            plot!(obstacle_map, yflip=false, z_order=1)
+        end
+
         # Draw agents and nodes
         scatter!(node_xs[1:world_state.n_nodes], node_ys[1:world_state.n_nodes], markercolor=:red)
         show(io, MIME("image/png"), scatter!(agent_xs, agent_ys, markercolor=:blue))

@@ -6,8 +6,6 @@
     <property name="name">window1</property>
     <property name="can-focus">False</property>
     <property name="title" translatable="yes">MAGESim 1.0</property>
-    <property name="default-width">600</property>
-    <property name="default-height">500</property>
     <child>
       <object class="GtkBox" id="box1">
         <property name="name">box1</property>
@@ -16,7 +14,8 @@
         <property name="orientation">vertical</property>
         <child>
           <object class="GtkBox" id="box2">
-            <property name="height-request">400</property>
+            <property name="width-request">100</property>
+            <property name="height-request">100</property>
             <property name="visible">True</property>
             <property name="can-focus">False</property>
             <property name="orientation">vertical</property>
@@ -25,7 +24,7 @@
             </child>
           </object>
           <packing>
-            <property name="expand">False</property>
+            <property name="expand">True</property>
             <property name="fill">True</property>
             <property name="position">0</property>
           </packing>
@@ -36,6 +35,7 @@
             <property name="name">grid1</property>
             <property name="visible">True</property>
             <property name="can-focus">False</property>
+            <property name="valign">start</property>
             <child>
               <object class="GtkLabel">
                 <property name="visible">True</property>

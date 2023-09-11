@@ -11,7 +11,7 @@ import .ConfigLoader: load_config
 # Then commit as v1.0, write some docs, and start looking at what's needed to make eg. patrolling work
 function main(args)
 
-    headless, world_fpath, n_agents, agent_starts, speedup, timeout, multithreaded = load_config(args)
+    headless, world_fpath, obstacle_map, n_agents, agent_starts, speedup, timeout, multithreaded = load_config(args)
 
     if !headless
         builder = create_window()
@@ -29,7 +29,7 @@ function main(args)
             world_running, world = world_step(world, agents)
             step_agents!(agents, world, multithreaded)
             if !headless
-                gtk_running = update_window!(world, agents, actual_speedup, builder)
+                gtk_running = update_window!(world, obstacle_map, agents, actual_speedup, builder)
             end
             log(world, logger, step)
             for node in world.nodes
