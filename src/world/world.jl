@@ -1,9 +1,7 @@
 module World
 
 import ..Types: WorldState, AgentState, Node, DummyNode, AbstractNode
-import ..WorldRenderer: create_window, update_window!, close_window, gtk_is_running
 import ..Utils: pos_distance
-using Gtk
 using Graphs, SimpleWeightedGraphs
 using JSON
 

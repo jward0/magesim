@@ -9,6 +9,10 @@ Pulls config information from json file in configs directory, specified as comma
 """
 function load_config(args::Vector{String})
 
+    if length(args) != 1
+        throw(ArgumentError("Invalid number of arguments: $(length(args)). Please supply config name as only argument."))
+    end
+
     config = JSON.parsefile(string("configs/", string(args[1]), ".json"))
 
     headless::Bool = config["headless"]

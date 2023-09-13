@@ -1,4 +1,5 @@
 from julia.api import Julia
+Julia(runtime='/home/james/julia/julia-1.9.2/bin/julia', compiled_modules=False)
 from julia import Main
 from pettingzoo.utils.env import ParallelEnv
 
@@ -6,13 +7,13 @@ from pettingzoo.utils.env import ParallelEnv
 class MagesimParallelEnv(ParallelEnv):
 
     def __init__(self, world_fpath):
-        super(MagesimParallelEnv, self).__init__(world_fpath)
-        Julia(runtime='/home/james/julia/julia-1.9.2/bin/julia', compiled_modules=False)
+        super(MagesimParallelEnv, self).__init__()
         jl = Julia()
-        jl.eval('include("src/utils/include.jl")')
+        # Modified include as wrapper does not currently support rendering
+        jl.eval('include("src/utils/pz_include.jl")')
         jl.eval('import .World: create_world')
         Main.world_fpath = world_fpath
-        world = Main.eval('create_world(world_fpath)')
+        self.world = Main.eval('create_world(world_fpath)')
         agents = []
         num_agents = []
         possible_agents = []
