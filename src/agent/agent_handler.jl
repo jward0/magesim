@@ -29,7 +29,7 @@ messages between agents
 function step_agents!(agents::Array{AgentState, 1}, world::WorldState, multithreaded::Bool = true)
 
     # Note that WorldState MUST be immutable for this to guarantee thread-safety for custom user code
-    # These are intentionally in subsequent loops (multithreaded performance would be improved by having
+    # These are intentionally in sequential loops (multithreaded performance would be improved by having
     # a single loop instead) as users may wish to insert message-passing steps between steps, and the
     # seperate loops give an easy way to achieve synchronicity
 

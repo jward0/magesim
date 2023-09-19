@@ -41,8 +41,22 @@ end
 
 # --- Node + map types
 
-struct NodeValues
-    value_string::String
+Base.@kwdef struct NodeValues
+    """
+    For python wrapping purposes, the only types supported in NodeValues are String, Int, Float, Bool, 
+    and 1-d Array of these types
+
+    Similarly for these purposes, avoid using 'Int' fields unless they can only a finite number of positive
+    integral values, in which case the default value should be set to the largest possible. It is recommended
+    that this is only used for eg. enums, and actual numbers should be represented as floats here. 
+        
+    Likewise, default string values should be a string of the integer value representing the longest
+    possible length of the string (in characters)
+
+    If you do not wish to use the PettingZoo wrapper, you may disregard the above comments.
+    """
+    value_string::String = "10"
+
 end
 
 struct DummyNode <: AbstractNode
@@ -75,7 +89,7 @@ struct Node <: AbstractNode
         position = Position(node_dict["position"]["x"], 
                             node_dict["position"]["y"])
         neighbours = node_dict["neighbours"]
-        values = NodeValues(node_dict["values"])
+        values = NodeValues()
 
         new(id, label, position, neighbours, values)
     end
@@ -116,10 +130,6 @@ struct AgentValues
     example_value::Nothing
 end
 
-struct AgentObservation
-    observation::WorldState
-end
-
 mutable struct AgentState
     id::Integer
     position::Position
@@ -131,7 +141,6 @@ mutable struct AgentState
     inbox::Queue{AbstractMessage}
     outbox::Queue{AbstractMessage}
     world_state_belief::Union{WorldState, Nothing}
-    observation::Union{AgentObservation, Nothing}
 
     function AgentState(id::Int64, start_node_idx::Int64, start_node_pos::Position, values::Nothing)
 
