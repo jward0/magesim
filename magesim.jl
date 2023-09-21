@@ -7,8 +7,9 @@ import .WorldRenderer: create_window, update_window!, close_window
 import .AgentHandler: spawn_agents, step_agents!
 import .ConfigLoader: load_config
 
-# TODO Move to next action once target reached (maybe?), Python wrapper, LOS checker with image layer
-# Then commit as v1.0, write some docs, and start looking at what's needed to make eg. patrolling work
+# TODO Move to next action once target reached (maybe?), Python wrapper, LOS checker with 
+# image layer, then commit as v1.0, write some docs, and start looking at what's needed 
+# to make eg. patrolling work
 function main(args)
 
     headless, world_fpath, obstacle_map, n_agents, agent_starts, speedup, timeout, multithreaded = load_config(args)

@@ -56,6 +56,8 @@ Base.@kwdef struct NodeValues
     If you do not wish to use the PettingZoo wrapper, you may disregard the above comments.
     """
     value_string::String = "10"
+    value_arr::Array{Int64} = [1, 2, 3]
+    value_float::Float64 = 0.1
 
 end
 

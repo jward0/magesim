@@ -1,4 +1,5 @@
 import numpy as np
+
 from gymnasium.spaces import Sequence, Tuple, Discrete, MultiDiscrete, MultiBinary, Box, Text, Graph, Dict
 from pettingzoo.utils.env import ParallelEnv
 
@@ -18,11 +19,15 @@ class MagesimParallelEnv(ParallelEnv):
         # Modified include as wrapper does not currently support rendering via Julia
         # And some extra Julia utils are needed to interface with PettingZoo
 
-        jl.eval('include("src/utils/pz_include.jl")')
-        jl.eval('import .ConfigLoader: load_config')
-        jl.eval('import .World: create_world')
-        jl.eval('import .AgentHandler: spawn_agents')
-        jl.eval('import .SpaceHandler: generate_action_space, unwrap_node_values')
+        jl.eval('''
+            include("src/utils/pz_include.jl")
+            import .Types: WorldState, AgentState, Logger, DummyNode
+            import .ConfigLoader: load_config
+            import .LogWriter: log
+            import .World: create_world, world_step
+            import .AgentHandler: spawn_agents, step_agents!
+            import .SpaceHandler: generate_action_space, unwrap_node_values, unwrap_world
+        ''')
 
         Main.config_name = config_name
 
@@ -87,9 +92,9 @@ class MagesimParallelEnv(ParallelEnv):
                 elif isinstance(content[0], str):
                     individual_spaces.append(Tuple([Text(int(c)) for c in content]))
                 else:
-                    raise TypeError("123Invalid type in NodeValues: may only be int, float, bool, str, or 1-d array thereof")
+                    raise TypeError("Invalid type in NodeValues: may only be int, float, bool, str, or 1-d array thereof")
             else:
-                raise TypeError("456Invalid type in NodeValues: may only be int, float, bool, str, or 1-d array thereof")
+                raise TypeError("Invalid type in NodeValues: may only be int, float, bool, str, or 1-d array thereof")
 
         node_space = Dict(dict(zip(node_contents_labels, individual_spaces)))
         all_node_spaces = Sequence(node_space)
@@ -101,8 +106,27 @@ class MagesimParallelEnv(ParallelEnv):
 
         print("Environment ready!")
 
-    def step():
-        pass
+    def step(self, actions):
+        Main.world_running, Main.world = Main.eval('world_step(world, agents)')
+        Main.eval('step_agents!(agents, world, false)')
+
+        observations = {}
+
+        for agent in self.agents:
+            Main.i = agent
+            nodes, edges, node_values = Main.eval('unwrap_world(agents[i].world_state_belief)')
+            agent_position = Main.eval('[agents[i].position.x, agents[i].position.y]')
+
+            map = {"nodes": nodes, "edge_links": edges}
+
+            observations[agent] = dict(zip(["agent_position", "map", "node_values"], 
+                                           [agent_position, map, node_values]))
+        reward = {}
+        terminated = {}
+        truncated = {}
+        info = {}
+
+        return observations, reward, terminated, truncated, info
 
     def reset():
         pass
