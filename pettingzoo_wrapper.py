@@ -26,7 +26,7 @@ class MagesimParallelEnv(ParallelEnv):
             import .LogWriter: log
             import .World: create_world, world_step
             import .AgentHandler: spawn_agents, step_agents!
-            import .SpaceHandler: generate_action_space, unwrap_node_values, unwrap_world
+            import .InterfaceUtils: generate_action_space, unwrap_node_values, unwrap_world
         ''')
 
         Main.config_name = config_name
@@ -106,9 +106,7 @@ class MagesimParallelEnv(ParallelEnv):
 
         print("Environment ready!")
 
-    def step(self, actions):
-        Main.world_running, Main.world = Main.eval('world_step(world, agents)')
-        Main.eval('step_agents!(agents, world, false)')
+    def get_observations(self):
 
         observations = {}
 
@@ -121,15 +119,29 @@ class MagesimParallelEnv(ParallelEnv):
 
             observations[agent] = dict(zip(["agent_position", "map", "node_values"], 
                                            [agent_position, map, node_values]))
-        reward = {}
-        terminated = {}
-        truncated = {}
-        info = {}
+        return observations
+    
+    def step(self, actions):
+        Main.actions = actions
+        Main.eval('step_agents!(agents, world, false, actions)')
+        Main.world_running, Main.world, rewards_arr = Main.eval('world_step(world, agents)')
 
-        return observations, reward, terminated, truncated, info
+        observations = self.get_observations()
+        rewards = dict(enumerate(rewards_arr))
+        terminated = dict(enumerate([False for _ in range(self.num_agents)]))
+        truncated = dict(enumerate([False for _ in range(self.num_agents)]))
+        info = dict(enumerate([None for _ in range(self.num_agents)]))
 
-    def reset():
-        pass
+        return observations, rewards, terminated, truncated, info
+
+    def reset(self, seed=0):
+
+        Main.world = Main.eval('create_world(world_fpath)')
+        Main.agents = Main.eval('spawn_agents(n_agents, agent_starts, world)')
+
+        self.world = Main.world
+
+        return self.get_observations()
 
     def render():
         pass
@@ -138,7 +150,7 @@ class MagesimParallelEnv(ParallelEnv):
         pass
 
     def state():
-        pass
+        return Main.eval('unwrap_world(world)')
 
     def observation_space(self, agent):
         return self.observation_spaces[agent]

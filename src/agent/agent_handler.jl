@@ -1,8 +1,10 @@
 module AgentHandler
 
-import ..Types: AgentState, WorldState, Position
+import ..Types: AgentState, WorldState, Position, StepTowardsAction
 import ..Agent: agent_step!, make_decisions!, observe_world!
 import ..MessagePasser: pass_messages!
+
+using DataStructures
 
 """
     spawn_agents(agent_count::Int64, start_nodes::Array{Int64, 1}, world::WorldState)
@@ -26,7 +28,10 @@ end
 Modify action queues, step once through movement dynamics, generate observations, and pass 
 messages between agents   
 """
-function step_agents!(agents::Array{AgentState, 1}, world::WorldState, multithreaded::Bool = true)
+function step_agents!(agents::Array{AgentState, 1}, 
+                      world::WorldState, 
+                      multithreaded::Bool=true, 
+                      force_actions::Union{Bool, Array{Int64, 1}}=false)
 
     # Note that WorldState MUST be immutable for this to guarantee thread-safety for custom user code
     # These are intentionally in sequential loops (multithreaded performance would be improved by having
@@ -34,8 +39,14 @@ function step_agents!(agents::Array{AgentState, 1}, world::WorldState, multithre
     # seperate loops give an easy way to achieve synchronicity
 
     if multithreaded
+
         Threads.@threads for agent in agents
-            make_decisions!(agent)
+            if force_actions != false
+                empty!(agent.action_queue)
+                enqueue!(agent.action_queue, StepTowardsAction(force_actions[agent.id]))
+            else
+                make_decisions!(agent)
+            end
         end
     
         Threads.@threads for agent in agents
@@ -45,9 +56,16 @@ function step_agents!(agents::Array{AgentState, 1}, world::WorldState, multithre
         Threads.@threads for agent in agents
             observe_world!(agent, world)
         end
+
     else
+
         for agent in agents
-            make_decisions!(agent)
+            if force_actions != false
+                empty!(agent.action_queue)
+                enqueue!(agent.action_queue, StepTowardsAction(force_actions[agent.id]))
+            else
+                make_decisions!(agent)
+            end
         end
     
         for agent in agents

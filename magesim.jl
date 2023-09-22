@@ -27,8 +27,10 @@ function main(args)
 
     for step in 1:timeout
         t = @elapsed begin
-            world_running, world = world_step(world, agents)
+
             step_agents!(agents, world, multithreaded)
+            world_running, world, _ = world_step(world, agents)
+            
             if !headless
                 gtk_running = update_window!(world, obstacle_map, agents, actual_speedup, builder)
             end

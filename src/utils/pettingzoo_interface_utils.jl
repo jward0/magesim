@@ -1,6 +1,6 @@
-module SpaceHandler
+module InterfaceUtils
 # include("types.jl")
-# Doesn't include here as this module should only be used with PZ wrappre,
+# Doesn't include here as this module should only be used with PZ wrapper,
 # which include it
 import ..Types: WaitAction, MoveToAction, StepTowardsAction, AgentState, WorldState, NodeValues, DummyNode
 using Graphs, SimpleWeightedGraphs
@@ -50,7 +50,7 @@ function unwrap_world(world::WorldState)
             push!(node_dicts, Dict(zip(l, values)))
         end
     end
-    
+
     return map_node_positions, map_edge_links, node_dicts
 end
 

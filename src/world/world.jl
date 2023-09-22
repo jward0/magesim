@@ -52,11 +52,14 @@ end
 """
     world_step(world_state::WorldState, agents::Array{AgentState, 1})
 
-Return updated world state
+Return updated world state and reward allocated to agents
 """
 function world_step(world_state::WorldState, agents::Array{AgentState, 1})
     updated_world_state = WorldState(world_state.nodes, world_state.n_nodes, world_state.map, world_state.paths, world_state.time + 1, world_state.done)
-    return true, updated_world_state
+    
+    rewards = zeros(Float64, length(agents))
+
+    return true, updated_world_state, rewards
 end
 
 """
