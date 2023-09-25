@@ -3,10 +3,8 @@ import numpy as np
 from gymnasium.spaces import Sequence, Tuple, Discrete, MultiDiscrete, MultiBinary, Box, Text, Graph, Dict
 from pettingzoo.utils.env import ParallelEnv
 
-from julia.api import Julia
-Julia(runtime='/home/james/julia/julia-1.9.2/bin/julia', compiled_modules=False)
-from julia import Main
-
+import juliacall
+from juliacall import Main as jl
 
 class MagesimParallelEnv(ParallelEnv):
 
@@ -15,40 +13,33 @@ class MagesimParallelEnv(ParallelEnv):
         print("Preparing Julia instance...")
 
         # super(MagesimParallelEnv, self).__init__()
-        jl = Julia()
+        # jl = Julia()
+
         # Modified include as wrapper does not currently support rendering via Julia
         # And some extra Julia utils are needed to interface with PettingZoo
 
-        jl.eval('''
-            include("src/utils/pz_include.jl")
-            import .Types: WorldState, AgentState, Logger, DummyNode
-            import .ConfigLoader: load_config
-            import .LogWriter: log
-            import .World: create_world, world_step
-            import .AgentHandler: spawn_agents, step_agents!
-            import .InterfaceUtils: generate_action_space, unwrap_node_values, unwrap_world
-        ''')
-
-        Main.config_name = config_name
+        jl.seval('include("src/utils/pz_include.jl")')
+        jl.seval('import .Types: WorldState, AgentState, Logger, DummyNode')
+        jl.seval('import .ConfigLoader: load_config')
+        jl.seval('import .LogWriter: log')
+        jl.seval('import .World: create_world, world_step')
+        jl.seval('import .AgentHandler: spawn_agents, step_agents_')
+        jl.seval('import .InterfaceUtils: generate_action_space, unwrap_node_values, unwrap_world, parse_from_py')
 
         print("Loading config...")
 
-        _, world_fpath, obstacle_map, n_agents, agent_starts, _, _, _ = Main.eval('load_config([config_name])')
-
-        Main.world_fpath = world_fpath
-        Main.n_agents = n_agents
-        Main.agent_starts = agent_starts
+        _, world_fpath, obstacle_map, n_agents, agent_starts, _, _, _ = jl.load_config(config_name)
 
         print("Creating world...")
 
-        Main.world = Main.eval('create_world(world_fpath)')
-        Main.agents = Main.eval('spawn_agents(n_agents, agent_starts, world)')
+        world = jl.create_world(world_fpath)
+        jl.agents = jl.spawn_agents(n_agents, agent_starts, world)
 
-        self.world = Main.world
+        self.world = world
 
         print("Generating spaces...")
 
-        self.n_nodes = Main.eval('world.n_nodes')
+        self.n_nodes = world.n_nodes
 
         self.agents = [i+1 for i in range(n_agents)]
         # Arbitrarily chosen 16 as max n_agents
@@ -64,7 +55,7 @@ class MagesimParallelEnv(ParallelEnv):
         map_space = Graph(node_space=Box(low=-np.inf, high=np.inf, shape=(2,)), edge_space=None)
         # other_agents_position_space = 
 
-        node_contents, node_contents_labels = Main.eval('unwrap_node_values()')
+        node_contents, node_contents_labels = jl.unwrap_node_values()
 
         # Take the tuples of default values and labels from unwrap_node_values() and 
         # use them to construct appropriate spaces that can represent custom NodeValues
@@ -74,6 +65,9 @@ class MagesimParallelEnv(ParallelEnv):
 
         for content in node_contents:
 
+            if isinstance(content, juliacall.ArrayValue):
+                content = np.asarray(content)
+
             if isinstance(content, bool):
                 individual_spaces.append(MultiBinary(1))
             elif isinstance(content, int):
@@ -82,7 +76,7 @@ class MagesimParallelEnv(ParallelEnv):
                 individual_spaces.append(Box(low=-np.inf, high=np.inf, shape=(1,)))
             elif isinstance(content, str):
                 individual_spaces.append(Text(int(content)))
-            elif isinstance(content, np.ndarray) or isinstance(content, list):
+            elif isinstance(content, np.ndarray):
                 if isinstance(content[0], np.integer):
                     individual_spaces.append(MultiDiscrete(np.array(content)))
                 elif isinstance(content[0], np.floating):
@@ -110,22 +104,18 @@ class MagesimParallelEnv(ParallelEnv):
 
         observations = {}
 
-        for agent in self.agents:
-            Main.i = agent
-            nodes, edges, node_values = Main.eval('unwrap_world(agents[i].world_state_belief)')
-            agent_position = Main.eval('[agents[i].position.x, agents[i].position.y]')
-
+        for i in self.agents:
+            nodes, edges, node_values = jl.unwrap_world(jl.agents[i-1].world_state_belief)
+            agent_position = [jl.agents[i-1].position.x, jl.agents[i-1].position.y]
             map = {"nodes": nodes, "edge_links": edges}
 
-            observations[agent] = dict(zip(["agent_position", "map", "node_values"], 
+            observations[i] = dict(zip(["agent_position", "map", "node_values"], 
                                            [agent_position, map, node_values]))
         return observations
     
     def step(self, actions):
-        Main.actions = actions
-        Main.eval('step_agents!(agents, world, false, actions)')
-        Main.world_running, Main.world, rewards_arr = Main.eval('world_step(world, agents)')
-
+        jl.step_agents_(jl.agents, self.world, False, jl.parse_from_py(actions))
+        world_running, self.world, rewards_arr = jl.world_step(self.world, jl.agents)
         observations = self.get_observations()
         rewards = dict(enumerate(rewards_arr))
         terminated = dict(enumerate([False for _ in range(self.num_agents)]))
@@ -136,10 +126,10 @@ class MagesimParallelEnv(ParallelEnv):
 
     def reset(self, seed=0):
 
-        Main.world = Main.eval('create_world(world_fpath)')
-        Main.agents = Main.eval('spawn_agents(n_agents, agent_starts, world)')
+        jl.world = jl.seval('create_world(world_fpath)')
+        jl.agents = jl.seval('spawn_agents(n_agents, agent_starts, world)')
 
-        self.world = Main.world
+        self.world = jl.world
 
         return self.get_observations()
 
@@ -150,7 +140,7 @@ class MagesimParallelEnv(ParallelEnv):
         pass
 
     def state():
-        return Main.eval('unwrap_world(world)')
+        return jl.seval('unwrap_world(world)')
 
     def observation_space(self, agent):
         return self.observation_spaces[agent]

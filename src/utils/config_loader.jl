@@ -7,13 +7,9 @@ using JSON, Images
 
 Pulls config information from json file in configs directory, specified as command line argument
 """
-function load_config(args::Vector{String})
+function load_config(arg::String)
 
-    if length(args) != 1
-        throw(ArgumentError("Invalid number of arguments: $(length(args)). Please supply config name as only argument."))
-    end
-
-    config = JSON.parsefile(string("configs/", string(args[1]), ".json"))
+    config = JSON.parsefile(string("configs/", string(arg), ".json"))
 
     headless::Bool = config["headless"]
     world_fpath::String = string("maps/", config["world_file"])

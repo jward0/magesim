@@ -4,13 +4,18 @@ module InterfaceUtils
 # which include it
 import ..Types: WaitAction, MoveToAction, StepTowardsAction, AgentState, WorldState, NodeValues, DummyNode
 using Graphs, SimpleWeightedGraphs
+using PythonCall
 
 function generate_action_space(agent::AgentState)
 
 end
 
-function parse_action_from_python()
+function parse_from_py(input::PyArray)
+    return pyconvert(Array{Int64}, input)
+end
 
+function parse_from_py(input::PyList)
+    return pyconvert(Array{Int64}, input)
 end
 
 function unwrap_node_values(node_values::NodeValues = NodeValues())
