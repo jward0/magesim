@@ -1,0 +1,5 @@
+{
+    "image": "example.pgm",
+    "graph": "example.json",
+    "scale_factor": 0.15
+}

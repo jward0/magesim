@@ -16,13 +16,13 @@ function main(args)
         throw(ArgumentError("Invalid number of arguments: $(length(args)). Please supply config name as only argument."))
     end
 
-    headless, world_fpath, obstacle_map, n_agents, agent_starts, speedup, timeout, multithreaded = load_config(args[1])
+    headless, world_fpath, obstacle_map, scale_factor, n_agents, agent_starts, speedup, timeout, multithreaded = load_config(args[1])
 
     if !headless
         builder = create_window()
     end
 
-    world = create_world(world_fpath, obstacle_map)
+    world = create_world(world_fpath, obstacle_map, scale_factor)
     agents = spawn_agents(n_agents, agent_starts, world)
     ts = 1/speedup
     actual_speedup = speedup

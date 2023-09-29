@@ -1,6 +1,5 @@
 {
-	"world_file": "example.json",
-	"obstacle_map": "example.pgm",
+	"world": "example",
 	"headless": false,
 	"n_agents": 4,
 	"agent_starts": [1, 2, 3, 4],

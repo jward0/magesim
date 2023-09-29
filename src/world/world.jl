@@ -10,7 +10,7 @@ using JSON
 
 Load world info from JSON file, construct node and map representations, and return world state
 """
-function create_world(fpath::String, obstacle_map::Union{Nothing, Array{}})
+function create_world(fpath::String, obstacle_map::Union{Nothing, Array{}}, scale_factor::Float64)
     nodes_dict = JSON.parsefile(fpath)
     nodes = Array{AbstractNode, 1}(undef, length(nodes_dict))
 
@@ -19,10 +19,10 @@ function create_world(fpath::String, obstacle_map::Union{Nothing, Array{}})
     for (strid, node) in nodes_dict
         id = parse(Int, strid)
         if id < 0
-            nodes[length(nodes_dict) + id + 1] = DummyNode(string(length(nodes_dict) + id + 1), node)
+            nodes[length(nodes_dict) + id + 1] = DummyNode(string(length(nodes_dict) + id + 1), node, scale_factor)
         else
             n_nodes +=1
-            nodes[id] = Node(strid, node)
+            nodes[id] = Node(strid, node, scale_factor)
         end
     end
     
@@ -45,7 +45,7 @@ function create_world(fpath::String, obstacle_map::Union{Nothing, Array{}})
 
     graph_map = SimpleWeightedDiGraph(sources, destinations, weights)
 
-    world_state = WorldState(nodes, n_nodes, graph_map, obstacle_map)
+    world_state = WorldState(nodes, n_nodes, graph_map, obstacle_map, scale_factor)
     return world_state
 end
 
@@ -55,7 +55,7 @@ end
 Return updated world state and reward allocated to agents
 """
 function world_step(world_state::WorldState, agents::Array{AgentState, 1})
-    updated_world_state = WorldState(world_state.nodes, world_state.n_nodes, world_state.map, world_state.obstacle_map, world_state.paths, world_state.time + 1, world_state.done)
+    updated_world_state = WorldState(world_state.nodes, world_state.n_nodes, world_state.map, world_state.obstacle_map, world_state.scale_factor, world_state.paths, world_state.time + 1, world_state.done)
     
     rewards = zeros(Float64, length(agents))
 

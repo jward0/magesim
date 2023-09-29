@@ -11,10 +11,14 @@ function load_config(arg::String)
 
     config = JSON.parsefile(string("configs/", string(arg), ".json"))
 
+    world_info = JSON.parsefile(string("maps/", string(config["world"]), ".info"))
+
     headless::Bool = config["headless"]
-    world_fpath::String = string("maps/", config["world_file"])
-    if "obstacle_map" in keys(config)
-        obstacle_map = load(string("maps/", config["obstacle_map"]))[end:-1:1, 1:1:end]
+    world_fpath::String = string("maps/", world_info["graph"])
+    scale_factor::Float64 = 1.0
+    if "image" in keys(world_info)
+        obstacle_map = load(string("maps/", world_info["image"]))[end:-1:1, 1:1:end]
+        scale_factor = world_info["scale_factor"]
     else
         obstacle_map = nothing
     end
@@ -24,7 +28,7 @@ function load_config(arg::String)
     timeout::Int64 = config["timeout"]
     multithreaded::Bool = config["multithreaded"]
 
-    return headless, world_fpath, obstacle_map, n_agents, agent_starts, speedup, timeout, multithreaded
+    return headless, world_fpath, obstacle_map, scale_factor, n_agents, agent_starts, speedup, timeout, multithreaded
 end
 
 end
