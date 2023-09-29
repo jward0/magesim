@@ -110,7 +110,7 @@ class MagesimParallelEnv(ParallelEnv):
             map = {"nodes": nodes, "edge_links": edges}
 
             observations[i] = dict(zip(["agent_position", "map", "node_values"], 
-                                           [agent_position, map, node_values]))
+                                       [agent_position, map, node_values]))
         return observations
     
     def step(self, actions):

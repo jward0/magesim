@@ -6,10 +6,6 @@ import ..Types: WaitAction, MoveToAction, StepTowardsAction, AgentState, WorldSt
 using Graphs, SimpleWeightedGraphs
 using PythonCall
 
-function generate_action_space(agent::AgentState)
-
-end
-
 function parse_from_py(input::PyArray)
     return pyconvert(Array{Int64}, input)
 end
@@ -57,10 +53,6 @@ function unwrap_world(world::WorldState)
     end
 
     return map_node_positions, map_edge_links, node_dicts
-end
-
-function parse_world_from_python()
-
 end
 
 end

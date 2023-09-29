@@ -8,7 +8,7 @@ import .AgentHandler: spawn_agents, step_agents!
 import .ConfigLoader: load_config
 
 # TODO Move to next action once target reached (maybe?), LOS checker with image layer,
-# make Python wrapper not slow as shit, then commit as v1.0, write some docs, 
+# then commit as v1.0, write some docs, 
 # and start looking at what's needed to make eg. patrolling work
 function main(args)
 
@@ -22,7 +22,7 @@ function main(args)
         builder = create_window()
     end
 
-    world = create_world(world_fpath)
+    world = create_world(world_fpath, obstacle_map)
     agents = spawn_agents(n_agents, agent_starts, world)
     ts = 1/speedup
     actual_speedup = speedup
@@ -36,7 +36,7 @@ function main(args)
             world_running, world, _ = world_step(world, agents)
             
             if !headless
-                gtk_running = update_window!(world, obstacle_map, agents, actual_speedup, builder)
+                gtk_running = update_window!(world, agents, actual_speedup, builder)
             end
             log(world, logger, step)
             for node in world.nodes

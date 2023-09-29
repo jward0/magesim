@@ -106,22 +106,24 @@ struct WorldState
     nodes::Array{AbstractNode, 1}
     n_nodes::Int
     map::AbstractGraph
+    obstacle_map::Union{Nothing, Array{}}
     paths::Graphs.AbstractPathState  # Has fields dists, parents (for back-to-front navigation)
     time::Real
     done::Bool
     
     function WorldState(nodes::Array{AbstractNode, 1},
                         n_nodes::Int,
-                        map::AbstractGraph, 
+                        map::AbstractGraph,
+                        obstacle_map::Union{Nothing, Array{}} ,
                         paths::Union{Graphs.AbstractPathState, Nothing}=nothing, 
                         time::Float64=0.0, 
                         done::Bool=false)
 
         if paths === nothing
             generated_paths = floyd_warshall_shortest_paths(map)
-            new(nodes, n_nodes, map, generated_paths, time, done)
+            new(nodes, n_nodes, map, obstacle_map, generated_paths, time, done)
         else
-            new(nodes, n_nodes, map, paths, time, done)
+            new(nodes, n_nodes, map, obstacle_map, paths, time, done)
         end
     end
 end

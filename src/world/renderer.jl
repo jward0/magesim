@@ -35,7 +35,7 @@ end
 
 Set GUI elements and draw canvas based on current world and agents state
 """
-function update_window!(world_state::WorldState, obstacle_map, agents::Array{AgentState, 1}, actual_speedup::Float64, builder::Gtk.GtkBuilderLeaf)
+function update_window!(world_state::WorldState, agents::Array{AgentState, 1}, actual_speedup::Float64, builder::Gtk.GtkBuilderLeaf)
     timer = builder["timelabel"]
     GAccessor.text(timer, string(world_state.time))
     speedup = builder["speeduplabel"]
@@ -49,9 +49,9 @@ function update_window!(world_state::WorldState, obstacle_map, agents::Array{Age
     @guarded draw(canvas) do widget
         ctx = getgc(canvas)
 
-        if !isnothing(obstacle_map)
+        if !isnothing(world_state.obstacle_map)
             lower_lims = (0, 0)
-            upper_lims = size(obstacle_map)
+            upper_lims = size(world_state.obstacle_map)
         else
             lower_lims = (minimum(node_ys)-5, minimum(node_xs)-5)
             upper_lims = (maximum(node_ys)+5, maximum(node_xs)+5)
@@ -71,8 +71,8 @@ function update_window!(world_state::WorldState, obstacle_map, agents::Array{Age
         legend=false)
 
         # Render obstacle layer (if present)
-        if !isnothing(obstacle_map)
-            plot!(obstacle_map, yflip=false, z_order=1)
+        if !isnothing(world_state.obstacle_map)
+            plot!(world_state.obstacle_map, yflip=false, z_order=1)
         end
 
         # Draw agents and nodes

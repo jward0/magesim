@@ -10,7 +10,7 @@ using JSON
 
 Load world info from JSON file, construct node and map representations, and return world state
 """
-function create_world(fpath::String)
+function create_world(fpath::String, obstacle_map::Union{Nothing, Array{}})
     nodes_dict = JSON.parsefile(fpath)
     nodes = Array{AbstractNode, 1}(undef, length(nodes_dict))
 
@@ -45,7 +45,7 @@ function create_world(fpath::String)
 
     graph_map = SimpleWeightedDiGraph(sources, destinations, weights)
 
-    world_state = WorldState(nodes, n_nodes, graph_map)
+    world_state = WorldState(nodes, n_nodes, graph_map, obstacle_map)
     return world_state
 end
 
@@ -55,7 +55,7 @@ end
 Return updated world state and reward allocated to agents
 """
 function world_step(world_state::WorldState, agents::Array{AgentState, 1})
-    updated_world_state = WorldState(world_state.nodes, world_state.n_nodes, world_state.map, world_state.paths, world_state.time + 1, world_state.done)
+    updated_world_state = WorldState(world_state.nodes, world_state.n_nodes, world_state.map, world_state.obstacle_map, world_state.paths, world_state.time + 1, world_state.done)
     
     rewards = zeros(Float64, length(agents))
 
