@@ -7,8 +7,7 @@ import .WorldRenderer: create_window, update_window!, close_window
 import .AgentHandler: spawn_agents, step_agents!
 import .ConfigLoader: load_config
 
-# TODO Write some docs, commit as v1.0,
-# and start looking at what's needed to make eg. patrolling work
+# TODO: Start looking at what's needed to make patrolling work
 function main(args)
 
     if length(args) != 1

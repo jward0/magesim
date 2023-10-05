@@ -5,6 +5,14 @@ import ..Utils: pos_distance, operate_pos
 
 using Infinity
 
+"""
+    check_los(obstacle_map::Array, scale_factor::Float64, source::Position, target::Position, range::Float64)
+
+    Returns: Bool
+
+Check for uninterrupted vision between two positions based on an obstacle map.
+Return true if vision exists, false otherwise.
+"""
 function check_los(obstacle_map::Array, 
                    scale_factor::Float64, 
                    source::Position, 

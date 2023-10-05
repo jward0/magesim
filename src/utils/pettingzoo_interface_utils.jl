@@ -6,14 +6,31 @@ import ..Types: WaitAction, MoveToAction, StepTowardsAction, AgentState, WorldSt
 using Graphs, SimpleWeightedGraphs
 using PythonCall
 
+"""
+    parse_from_py(input::PyArray)
+    returns: input array converted to Array{Int64}
+"""
 function parse_from_py(input::PyArray)
     return pyconvert(Array{Int64}, input)
 end
 
+"""
+    parse_from_py(input::PyList)
+    returns: input list converted to Array{Int64}
+"""
 function parse_from_py(input::PyList)
     return pyconvert(Array{Int64}, input)
 end
 
+"""
+    unwrap_node_values(node_values::NodeValues = NodeValues())
+    returns:
+        values_tuple::Tuple{Any} : field values of NodeValues composite type
+        labels_tuple::Tuple{String} : field labels of NodeValues composite type
+
+Convert a NodeValues object into a format that can be interpreted by juliacall as
+python datatypes
+"""
 function unwrap_node_values(node_values::NodeValues = NodeValues())
 
     values_arr = []
@@ -30,6 +47,16 @@ function unwrap_node_values(node_values::NodeValues = NodeValues())
     return values_tuple, labels_tuple
 end
 
+"""
+    unwrap_world(world::WorldState)
+    returns:
+        map_node_positions::Vector{Vector{Float64}} : graph map node positions
+        map_edge_links::Vector{Vector{Int64}} : graph map edges
+        node_dicts::Vector{Dict{String, Any}} : dictionaries of unwrapped nodes
+
+Convert a WorldState object into a format that can be interpreted by juliacall as
+python datatypes
+"""
 function unwrap_world(world::WorldState)
 
     map_node_positions::Vector{Vector{Float64}} = []
