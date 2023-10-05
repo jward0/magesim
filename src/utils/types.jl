@@ -1,174 +1,174 @@
-module Types
+benis benis
 
-using Graphs, DataStructures, Infinity
+benis benis, benis, benis
 
-# --- Abstract types ---
+# --- benis benis ---
 
-abstract type AbstractMessage end
+benis benis benis benis
 
-abstract type AbstractAction end
+benis benis benis benis
 
-abstract type AbstractNode end
+benis benis benis benis
 
-# --- General utility types ---
+# --- benis benis benis ---
 
-struct Position
-    x::Float64
-    y::Float64
-end
+benis benis
+    benis::benis
+    benis::benis
+benis
 
-struct Logger
-    log_directory::String
-end
+benis benis
+    benis::benis
+benis
 
-# --- Agent action types ---
+# --- benis benis benis ---
 
-struct WaitAction <: AbstractAction
-    field::Nothing
+benis benis <: benis
+    benis::benis
 
-    function WaitAction()
-        new(nothing)
-    end
-end
+    benis benis()
+        benis(benis)
+    benis
+benis
 
-struct MoveToAction <: AbstractAction
-    target::Int64
-end
+benis benis <: benis
+    benis::benis
+benis
 
-struct StepTowardsAction <: AbstractAction
-    target::Int64
-end
+benis benis <: benis
+    benis::benis
+benis
 
-# --- Node + map types
+# --- benis + benis benis
 
-Base.@kwdef struct NodeValues
+benis.@benis benis benis
     """
-    For python wrapping purposes, the only types supported in NodeValues are String, Int, Float, Bool, 
-    and 1-d Array of these types
+    benis benis benis benis, benis benis benis benis benis benis benis benis, benis, benis, benis, 
+    benis benis-benis benis benis benis benis
 
-    Similarly for these purposes, avoid using 'Int' fields unless they can only a finite number of positive
-    integral values, in which case the default value should be set to the largest possible. It is recommended
-    that this is only used for eg. enums, and actual numbers should be represented as floats here. 
+    benis benis benis benis, benis benis 'benis' benis benis benis benis benis benis benis benis benis benis
+    benis benis, benis benis benis benis benis benis benis benis benis benis benis benis benis. benis benis benis
+    benis benis benis benis benis benis benis. benis, benis benis benis benis benis benis benis benis benis. 
         
-    Likewise, default string values should be a string of the integer value representing the longest
-    possible length of the string (in characters)
+    benis, benis benis benis benis benis benis benis benis benis benis benis benis benis benis
+    benis benis benis benis benis (benis benis)
 
-    If you do not wish to use the PettingZoo wrapper, you may disregard the above comments.
+    benis benis benis benis benis benis benis benis benis benis, benis benis benis benis benis benis.
     """
-    value_string::String = "10"
-    value_arr::Array{Int64} = [1, 2, 3]
-    value_float::Float64 = 0.1
+    benis::benis = "benis"
+    benis::benis{benis} = [benis, benis, benis]
+    benis::benis = benis.benis
 
-end
+benis
 
-struct DummyNode <: AbstractNode
-    id::Integer
-    position::Position
-    neighbours::Array{Integer, 1}
+benis benis <: benis
+    benis::benis
+    benis::benis
+    benis::benis{benis, benis}
 
-    function DummyNode(strid::String, node_dict::Dict{String, Any}, scale_factor::Float64)
+    benis benis(benis::benis, benis::benis{benis, benis}, benis::benis)
 
-        id = parse(Int64, strid)
-        position = Position(node_dict["position"]["x"] * scale_factor, 
-                            node_dict["position"]["y"] * scale_factor)
-        neighbours = node_dict["neighbours"]
+        benis = benis(benis, benis)
+        benis = benis(benis["benis"]["benis"] * benis, 
+                            benis["benis"]["benis"] * benis)
+        benis = benis["benis"]
 
-        new(id, position, neighbours)
-    end
-end
+        benis(benis, benis, benis)
+    benis
+benis
 
-struct Node <: AbstractNode
-    id::Integer
-    label::String
-    position::Position
-    neighbours::Array{Integer, 1}
-    values::NodeValues
+benis benis <: benis
+    benis::benis
+    benis::benis
+    benis::benis
+    benis::benis{benis, benis}
+    benis::benis
 
-    function Node(strid::String, node_dict::Dict{String, Any}, scale_factor::Float64)
+    benis benis(benis::benis, benis::benis{benis, benis}, benis::benis)
 
-        id = parse(Int64, strid)
-        label = node_dict["label"]
-        position = Position(node_dict["position"]["x"] * scale_factor, 
-                            node_dict["position"]["y"] * scale_factor)
-        neighbours = node_dict["neighbours"]
-        values = NodeValues()
+        benis = benis(benis, benis)
+        benis = benis["benis"]
+        benis = benis(benis["benis"]["benis"] * benis, 
+                            benis["benis"]["benis"] * benis)
+        benis = benis["benis"]
+        benis = benis()
 
-        new(id, label, position, neighbours, values)
-    end
-end
+        benis(benis, benis, benis, benis, benis)
+    benis
+benis
 
 
 """
-Make WorldState mutable at your peril! This simulator is only guaranteed thread-safe if WorldState is immutable,
-thus allowing multiple agents in multiple threads to safely read it simultaneously
+benis benis benis benis benis benis! benis benis benis benis benis benis-benis benis benis benis benis,
+benis benis benis benis benis benis benis benis benis benis benis benis
 """
-struct WorldState
-    nodes::Array{AbstractNode, 1}
-    n_nodes::Int
-    map::AbstractGraph
-    obstacle_map::Union{Nothing, Array{}}
-    scale_factor::Float64
-    paths::Graphs.AbstractPathState  # Has fields dists, parents (for back-to-front navigation)
-    time::Real
-    done::Bool
+benis benis
+    benis::benis{benis, benis}
+    benis::benis
+    benis::benis
+    benis::benis{benis, benis{}}
+    benis::benis
+    benis::benis.benis  # benis benis benis, benis (benis benis-benis-benis benis)
+    benis::benis
+    benis::benis
     
-    function WorldState(nodes::Array{AbstractNode, 1},
-                        n_nodes::Int,
-                        map::AbstractGraph,
-                        obstacle_map::Union{Nothing, Array{}},
-                        scale_factor::Float64,
-                        paths::Union{Graphs.AbstractPathState, Nothing}=nothing, 
-                        time::Float64=0.0, 
-                        done::Bool=false)
+    benis benis(benis::benis{benis, benis},
+                        benis::benis,
+                        benis::benis,
+                        benis::benis{benis, benis{}},
+                        benis::benis,
+                        benis::benis{benis.benis, benis}=benis, 
+                        benis::benis=benis.benis, 
+                        benis::benis=benis)
 
-        if paths === nothing
-            generated_paths = floyd_warshall_shortest_paths(map)
-            new(nodes, n_nodes, map, obstacle_map, scale_factor, generated_paths, time, done)
-        else
-            new(nodes, n_nodes, map, obstacle_map, scale_factor, paths, time, done)
-        end
-    end
-end
+        benis benis === benis
+            benis = benis(benis)
+            benis(benis, benis, benis, benis, benis, benis, benis, benis)
+        benis
+            benis(benis, benis, benis, benis, benis, benis, benis, benis)
+        benis
+    benis
+benis
 
-# --- Agent types ---
+# --- benis benis ---
 
-struct AgentValues
-    example_value::Nothing
-end
+benis benis
+    benis::benis
+benis
 
-mutable struct AgentState
-    id::Integer
-    position::Position
-    values::AgentValues
-    action_queue::Queue{AbstractAction}
-    graph_position::Union{AbstractEdge, Int64}
-    step_size::Float64
-    comm_range::Float64
-    sight_range::Float64
-    inbox::Queue{AbstractMessage}
-    outbox::Queue{AbstractMessage}
-    world_state_belief::Union{WorldState, Nothing}
+benis benis benis
+    benis::benis
+    benis::benis
+    benis::benis
+    benis::benis{benis}
+    benis::benis{benis, benis}
+    benis::benis
+    benis::benis
+    benis::benis
+    benis::benis{benis}
+    benis::benis{benis}
+    benis::benis{benis, benis}
 
-    function AgentState(id::Int64, start_node_idx::Int64, start_node_pos::Position, values::Nothing)
+    benis benis(benis::benis, benis::benis, benis::benis, benis::benis)
 
-        new(id, start_node_pos, AgentValues(values), Queue{AbstractAction}(), start_node_idx, 1.0, ∞, 10.0, Queue{AbstractMessage}(), Queue{AbstractMessage}(), nothing)    
-    end
-end
+        benis(benis, benis, benis(benis), benis{benis}(), benis, benis.benis, ∞, benis.benis, benis{benis}(), benis{benis}(), benis)    
+    benis
+benis
 
-# --- Message types ---
+# --- benis benis ---
 
-struct StringMessage <: AbstractMessage
-    source::Int64
-    targets::Union{Array{Int64, 1}, Nothing}
-    message::String
+benis benis <: benis
+    benis::benis
+    benis::benis{benis{benis, benis}, benis}
+    benis::benis
 
-    function StringMessage(agent::AgentState, targets::Union{Array{Int64, 1}, Nothing}, message::String)
+    benis benis(benis::benis, benis::benis{benis{benis, benis}, benis}, benis::benis)
 
-        new(agent.id, targets, message)
-    end
-end
+        benis(benis.benis, benis, benis)
+    benis
+benis
 
-export WorldState
-export AgentState
+benis benis
+benis benis
 
-end
+benis
