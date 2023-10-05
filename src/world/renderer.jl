@@ -15,7 +15,7 @@ running::Bool = true
 Create and return the GtkBuilder for a GTK window containing all GUI elements. 
 """
 function create_window()
-    b = GtkBuilder(filename="src/world/test.glade")
+    b = GtkBuilder(filename="src/world/window.glade")
     win = b["window1"]
     push!(b["box2"], canvas)
     set_gtk_property!(b["box2"], :expand, canvas, true)
@@ -48,6 +48,8 @@ function update_window!(world_state::WorldState, agents::Array{AgentState, 1}, a
     agent_xs = [agent.position.x / sf for agent in agents]
     agent_ys = [agent.position.y / sf for agent in agents]
 
+    x_size=600
+
     @guarded draw(canvas) do widget
         ctx = getgc(canvas)
 
@@ -58,6 +60,8 @@ function update_window!(world_state::WorldState, agents::Array{AgentState, 1}, a
             lower_lims = (minimum(node_ys)-5, minimum(node_xs)-5)
             upper_lims = (maximum(node_ys)+5, maximum(node_xs)+5)
         end
+
+        aspect_ratio = (upper_lims[1] - lower_lims[1]) / (upper_lims[2] - lower_lims[2])
 
         # Draw graph
         graphplot(world_state.map, 
@@ -70,11 +74,15 @@ function update_window!(world_state::WorldState, agents::Array{AgentState, 1}, a
         aspect_ratio = :equal, 
         framestyle=:box, 
         ticks=:none, 
-        legend=false)
+        legend=false,
+        size=(x_size, trunc(Int64, x_size*aspect_ratio)))            
+        resize!(builder["window1"], x_size, trunc(Int64, x_size*aspect_ratio)+20)
 
         # Render obstacle layer (if present)
         if !isnothing(world_state.obstacle_map)
             plot!(world_state.obstacle_map, yflip=false, z_order=1)
+            # resize!(builder["window1"], 600, 400)
+
         end
 
         # Draw agents and nodes

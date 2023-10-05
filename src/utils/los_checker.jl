@@ -18,9 +18,6 @@ function check_los(obstacle_map::Array,
     scaled_source = operate_pos(source, scale_factor, /)
     scaled_target = operate_pos(target, scale_factor, /)
 
-    # current_pixel::Array{Int64} = [size(obstacle_map, 1) - ceil(scaled_source.y), ceil(scaled_source.x)]
-    # target_pixel::Array{Int64} = [size(obstacle_map, 1) - ceil(scaled_target.y), ceil(scaled_target.x)]
-
     current_pixel::Array{Int64} = [ceil(scaled_source.y), ceil(scaled_source.x)]
     current_position = [Float64(p) for p in current_pixel]
     target_pixel::Array{Int64} = [ceil(scaled_target.y), ceil(scaled_target.x)]

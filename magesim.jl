@@ -7,8 +7,7 @@ import .WorldRenderer: create_window, update_window!, close_window
 import .AgentHandler: spawn_agents, step_agents!
 import .ConfigLoader: load_config
 
-# TODO Move to next action once target reached (maybe?), LOS checker with image layer,
-# then commit as v1.0, write some docs, 
+# TODO Write some docs, commit as v1.0,
 # and start looking at what's needed to make eg. patrolling work
 function main(args)
 
