@@ -1,3 +1,9 @@
+## MAGESim
+This project is available under the MIT license (see LICENSE.txt)
+For questions, comments, or suggestions, contact me at
+github.com/jward0
+james.c.ward@bristol.ac.uk
+
 ## Interface with PettingZoo ParallelEnv API
 ### Limitations
 When using the provided wrapper to create a PettingZoo ParallelEnv object that wraps the simulator code, there are several restrictions that are not otherwise present that must be observed.
