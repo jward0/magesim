@@ -1,74 +1,74 @@
-benis benis
+module World
 
-benis ..benis: benis, benis, benis, benis, benis
-benis ..benis: benis
-benis benis, benis
-benis benis
+import ..Types: WorldState, AgentState, Node, DummyNode, AbstractNode
+import ..Utils: pos_distance
+using Graphs, SimpleWeightedGraphs
+using JSON
 
 """
-    benis(benis::benis)
+    create_world(fpath::String)
 
-benis benis benis benis benis benis, benis benis benis benis benis, benis benis benis benis
+Load world info from JSON file, construct node and map representations, and return world state
 """
-benis benis(benis::benis, benis::benis{benis, benis{}}, benis::benis)
-    benis = benis.benis(benis)
-    benis = benis{benis, benis}(benis, benis(benis))
+function create_world(fpath::String, obstacle_map::Union{Nothing, Array{}}, scale_factor::Float64)
+    nodes_dict = JSON.parsefile(fpath)
+    nodes = Array{AbstractNode, 1}(undef, length(nodes_dict))
 
-    benis::benis = benis
+    n_nodes::Int = 0
 
-    benis (benis, benis) benis benis
-        benis = benis(benis, benis)
-        benis benis < benis
-            benis[benis(benis) + benis + benis] = benis(benis(benis(benis) + benis + benis), benis, benis)
-        benis
-            benis +=benis
-            benis[benis] = benis(benis, benis, benis)
-        benis
-    benis
+    for (strid, node) in nodes_dict
+        id = parse(Int, strid)
+        if id < 0
+            nodes[length(nodes_dict) + id + 1] = DummyNode(string(length(nodes_dict) + id + 1), node, scale_factor)
+        else
+            n_nodes +=1
+            nodes[id] = Node(strid, node, scale_factor)
+        end
+    end
     
-    benis = benis{benis}()
-    benis = benis{benis}()
-    benis = benis{benis}()
+    sources = Vector{Int64}()
+    destinations = Vector{Int64}()
+    weights = Vector{Float64}()
 
-    benis benis benis benis
-        benis benis benis benis.benis
-            benis benis < benis
-                benis = benis[benis(benis) + benis + benis]
-            benis
-                benis = benis[benis]
-            benis
-            benis!(benis, benis.benis)
-            benis!(benis, benis.benis)
-            benis!(benis, benis(benis.benis, benis.benis))
-        benis
-    benis
+    for node in nodes
+        for n in node.neighbours
+            if n < 0
+                neighbour = nodes[length(nodes_dict) + n + 1]
+            else
+                neighbour = nodes[n]
+            end
+            push!(sources, node.id)
+            push!(destinations, neighbour.id)
+            push!(weights, pos_distance(node.position, neighbour.position))
+        end
+    end
 
-    benis = benis(benis, benis, benis)
+    graph_map = SimpleWeightedDiGraph(sources, destinations, weights)
 
-    benis = benis(benis, benis, benis, benis, benis)
-    benis benis
-benis
+    world_state = WorldState(nodes, n_nodes, graph_map, obstacle_map, scale_factor)
+    return world_state
+end
 
 """
-    benis(benis::benis, benis::benis{benis, benis})
+    world_step(world_state::WorldState, agents::Array{AgentState, 1})
 
-benis benis benis benis benis benis benis benis benis
+Return updated world state and reward allocated to agents
 """
-benis benis(benis::benis, benis::benis{benis, benis})
-    benis = benis(benis.benis, benis.benis, benis.benis, benis.benis, benis.benis, benis.benis, benis.benis + benis, benis.benis)
+function world_step(world_state::WorldState, agents::Array{AgentState, 1})
+    updated_world_state = WorldState(world_state.nodes, world_state.n_nodes, world_state.map, world_state.obstacle_map, world_state.scale_factor, world_state.paths, world_state.time + 1, world_state.done)
     
-    benis = benis(benis, benis(benis))
+    rewards = zeros(Float64, length(agents))
 
-    benis benis, benis, benis
-benis
+    return true, updated_world_state, rewards
+end
 
 """
-    benis()
+    stop_world()
 
-benis benis benis benis benis benis benis benis
+Safely stop the simulation and close the GUI
 """
-benis benis()
-    benis
-benis
+function stop_world()
+    nothing
+end
 
-benis
+end

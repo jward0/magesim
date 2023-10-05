@@ -1,65 +1,65 @@
-benis("benis/benis/benis.benis")
+include("src/utils/include.jl")
 
-benis .benis: benis, benis, benis, benis
-benis .benis: benis, benis, benis
-benis .benis: benis, benis
-benis .benis: benis, benis!, benis
-benis .benis: benis, benis!
-benis .benis: benis
+import .Types: WorldState, AgentState, Logger, DummyNode
+import .World: create_world, world_step, stop_world
+import .LogWriter: log, new_logger
+import .WorldRenderer: create_window, update_window!, close_window
+import .AgentHandler: spawn_agents, step_agents!
+import .ConfigLoader: load_config
 
-# benis: benis benis benis benis'benis benis benis benis benis benis
-benis benis(benis)
+# TODO: Start looking at what's needed to make patrolling work
+function main(args)
 
-    benis benis(benis) != benis
-        benis(benis("benis benis benis benis: $(benis(benis)). benis benis benis benis benis benis benis."))
-    benis
+    if length(args) != 1
+        throw(ArgumentError("Invalid number of arguments: $(length(args)). Please supply config name as only argument."))
+    end
 
-    benis, benis, benis, benis, benis, benis, benis, benis, benis = benis(benis[benis])
+    headless, world_fpath, obstacle_map, scale_factor, n_agents, agent_starts, speedup, timeout, multithreaded = load_config(args[1])
 
-    benis !benis
-        benis = benis()
-    benis
+    if !headless
+        builder = create_window()
+    end
 
-    benis = benis(benis, benis, benis)
-    benis = benis(benis, benis, benis)
-    benis = benis/benis
-    benis = benis
-    benis = benis
-    benis = benis()
+    world = create_world(world_fpath, obstacle_map, scale_factor)
+    agents = spawn_agents(n_agents, agent_starts, world)
+    ts = 1/speedup
+    actual_speedup = speedup
+    gtk_running = true
+    logger = new_logger()
 
-    benis benis benis benis:benis
-        benis = @benis benis
+    for step in 1:timeout
+        t = @elapsed begin
 
-            benis!(benis, benis, benis)
-            benis, benis, benis = benis(benis, benis)
+            step_agents!(agents, world, multithreaded)
+            world_running, world, _ = world_step(world, agents)
             
-            benis !benis
-                benis = benis!(benis, benis, benis, benis)
-            benis
-            benis(benis, benis, benis)
-            benis benis benis benis.benis
-                benis !(benis benis benis)
-                    benis(benis, benis, benis)
-                benis
-            benis
-            benis benis benis benis
-                benis(benis, benis, benis)
-            benis
-        benis
+            if !headless
+                gtk_running = update_window!(world, agents, actual_speedup, builder)
+            end
+            log(world, logger, step)
+            for node in world.nodes
+                if !(node isa DummyNode)
+                    log(node, logger, step)
+                end
+            end
+            for agent in agents
+                log(agent, logger, step)
+            end
+        end
 
-        benis benis && benis
-            benis(benis(benis-benis, benis))
-            benis = benis/benis(benis, benis)
-        benis
-            benis
-        benis
-    benis
+        if world_running && gtk_running
+            sleep(max(ts-t, 0))
+            actual_speedup = 1/max(t, ts)
+        else
+            break
+        end
+    end
 
-    benis()
-    benis !benis
-        benis(benis)
-    benis
+    stop_world()
+    if !headless
+        close_window(builder)
+    end
 
-benis
+end
 
-benis(benis)
+main(ARGS)

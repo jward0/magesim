@@ -1,101 +1,101 @@
-benis benis
+module LogWriter
 
-benis ..benis: benis, benis, benis, benis
-benis benis, benis
-benis benis
-
-"""
-    benis()
-
-benis benis benis benis benis benis benis benis
-"""
-benis benis()
-
-    benis = benis(benis("benis/", benis.benis(benis(), "benis:benis:benis/")))
-
-    benis !benis(benis.benis)
-        benis.benis.benis(benis.benis)
-    benis
-
-    benis benis
-benis
+import ..Types: Logger, WorldState, AgentState, Node
+using Graphs, SimpleWeightedGraphs
+using Dates
 
 """
-    benis(benis::benis, benis::benis, benis::benis)
+    new_logger()
 
-benis benis benis
+Create required log directory and return new logger
 """
-benis benis(benis::benis, benis::benis, benis::benis)
-    benis = benis(benis.benis, "benis", benis(benis.benis), ".benis") 
+function new_logger()
 
-    benis !benis(benis)
-        benis = "benis, benis, benis, benis benis benis, benis benis/benis, benis benis/benis"
-        benis(benis, "benis") benis benis
-            benis(benis, benis)
-            benis(benis,"\benis")
-        benis
-    benis
+    logger = Logger(string("logs/", Dates.format(now(), "yyyymmdd_HH:MM:SS/")))
 
-    benis benis.benis benis benis
-        benis = benis("benis,", benis(benis.benis), ",", benis(benis.benis))
-    benis
-        benis = benis("benis,", benis(benis(benis.benis)), ",", benis(benis(benis.benis)))
-    benis
+    if !isdir(logger.log_directory)
+        Base.Filesystem.mkpath(logger.log_directory)
+    end
 
-    benis = benis(benis(benis), ",", benis(benis.benis.benis), ",", benis(benis.benis.benis), ",", benis)
-
-    benis(benis, "benis") benis benis
-        benis(benis, benis)
-        benis(benis,"\benis")
-    benis
-benis
+    return logger
+end
 
 """
-    benis(benis::benis, benis::benis, benis::benis)
+    log(target::AgentState, logger::Logger, timestep::Int)
 
-benis benis benis
+Log AgentState data
 """
-benis benis(benis::benis, benis::benis, benis:: benis)
-    benis = benis(benis.benis, "benis", benis(benis.benis), ".benis")
+function log(target::AgentState, logger::Logger, timestep::Int)
+    fpath = string(logger.log_directory, "agent_", string(target.id), ".csv") 
 
-    benis !benis(benis)
-        benis = "benis, benis"
-        benis(benis, "benis") benis benis
-            benis(benis, benis)
-            benis(benis,"\benis")
-        benis
-    benis
+    if !isfile(fpath)
+        header = "timestep, x, y, graph location type, edge source/node, edge destination/node"
+        open(fpath, "w") do file
+            write(file, header)
+            write(file,"\n")
+        end
+    end
 
-    benis = benis(benis(benis, benis.benis.benis))
+    if target.graph_position isa Int64
+        graph_pos_str = string("node,", string(target.graph_position), ",", string(target.graph_position))
+    else
+        graph_pos_str = string("edge,", string(src(target.graph_position)), ",", string(dst(target.graph_position)))
+    end
 
-    benis(benis, "benis") benis benis
-        benis(benis, benis)
-        benis(benis,"\benis")
-    benis
-benis
+    csv_line = string(string(timestep), ",", string(target.position.x), ",", string(target.position.y), ",", graph_pos_str)
+
+    open(fpath, "a") do file
+        write(file, csv_line)
+        write(file,"\n")
+    end
+end
 
 """
-    benis(benis::benis, benis::benis, benis::benis)
+    log(target::Node, logger::Logger, timestep::Int)
 
-benis benis benis
+Log Node data
 """
-benis benis(benis::benis, benis::benis, benis::benis)
-    benis = benis(benis.benis, "benis.benis") 
+function log(target::Node, logger::Logger, timestep:: Int)
+    fpath = string(logger.log_directory, "node_", string(target.id), ".csv")
 
-    benis !benis(benis)
-        benis = "benis"
-        benis(benis, "benis") benis benis
-            benis(benis, benis)
-            benis(benis,"\benis")
-        benis
-    benis
+    if !isfile(fpath)
+        header = "timestep, value"
+        open(fpath, "w") do file
+            write(file, header)
+            write(file,"\n")
+        end
+    end
 
-    benis = benis(benis)
+    csv_line = string(string(timestep, target.values.value_string))
 
-    benis(benis, "benis") benis benis
-        benis(benis, benis)
-        benis(benis,"\benis")
-    benis
-benis
+    open(fpath, "a") do file
+        write(file, csv_line)
+        write(file,"\n")
+    end
+end
 
-benis
+"""
+    log(target::WorldState, logger::Logger, timestep::Int)
+
+Log WorldState data
+"""
+function log(target::WorldState, logger::Logger, timestep::Int)
+    fpath = string(logger.log_directory, "world.csv") 
+
+    if !isfile(fpath)
+        header = "timestep"
+        open(fpath, "w") do file
+            write(file, header)
+            write(file,"\n")
+        end
+    end
+
+    csv_line = string(timestep)
+
+    open(fpath, "a") do file
+        write(file, csv_line)
+        write(file,"\n")
+    end
+end
+
+end
