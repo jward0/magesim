@@ -1,73 +1,73 @@
-module AgentDynamics
+benis benis
 
-import ..Types: Position, WorldState, AgentState
-import ..Utils: pos_distance, operate_pos, pos_norm
-using Graphs, SimpleWeightedGraphs, LinearAlgebra
+benis ..benis: benis, benis, benis
+benis ..benis: benis, benis, benis
+benis benis, benis, benis
 
 """
-    calculate_next_position(agent::AgentState, target::Int64, world::WorldState)
+    benis(benis::benis, benis::benis, benis::benis)
 
-Calculate the updated cartesian and graph position of an agent following one timestep of movement
-towards a target node.
+benis benis benis benis benis benis benis benis benis benis benis benis benis benis benis
+benis benis benis benis.
 
-Path chosen to step along is the shortest path towards the target. Additionally returns flag 
-to indicate whether target has been reached.
+benis benis benis benis benis benis benis benis benis benis benis benis. benis benis benis 
+benis benis benis benis benis benis benis.
 
-returns: 
-new_pos::Position, updated cartesian position of agent
-new_graph_pos::Union{AbstractEdge, Int64}, edge or node ID associated with agent's graph position
-at_target::Bool, target reached flag
+benis: 
+benis::benis, benis benis benis benis benis
+benis::benis{benis, benis}, benis benis benis benis benis benis benis'benis benis benis
+benis::benis, benis benis benis
 """
 
-function calculate_next_position(agent::AgentState, target::Int64, world::WorldState)
+benis benis(benis::benis, benis::benis, benis::benis)
 
-    # Get list of valid immediate targets
+    # benis benis benis benis benis benis
 
-    if agent.graph_position isa Int64
-        if target == agent.graph_position
-            # Break early if already at target
-            return agent.position, agent.graph_position, true
-        end
-        neighbours = neighbors(world.map, agent.graph_position)
-    elseif has_edge(world.map, dst(agent.graph_position), src(agent.graph_position))
-        neighbours = [src(agent.graph_position), dst(agent.graph_position)]
-    else
-        neighbours = [dst(agent.graph_position)]
-    end
+    benis benis.benis benis benis
+        benis benis == benis.benis
+            # benis benis benis benis benis benis
+            benis benis.benis, benis.benis, benis
+        benis
+        benis = benis(benis.benis, benis.benis)
+    benis benis(benis.benis, benis(benis.benis), benis(benis.benis))
+        benis = [benis(benis.benis), benis(benis.benis)]
+    benis
+        benis = [benis(benis.benis)]
+    benis
 
-    # Select immediate node target
+    # benis benis benis benis
 
-    distances_via_neighbours = map(n -> world.paths.dists[n, target] + pos_distance(agent.position, world.nodes[n].position), neighbours)
-    t = world.nodes[neighbours[argmin(distances_via_neighbours)]]
+    benis = benis(benis -> benis.benis.benis[benis, benis] + benis(benis.benis, benis.benis[benis].benis), benis)
+    benis = benis.benis[benis[benis(benis)]]
 
-    # Step along current edge towards immediate target
+    # benis benis benis benis benis benis benis
 
-    diff = operate_pos(t.position, agent.position, -)
+    benis = benis(benis.benis, benis.benis, -)
 
-    step_size = min(agent.step_size, pos_norm(diff))
+    benis = benis(benis.benis, benis(benis))
 
-    step = operate_pos(diff, step_size/pos_norm(diff), *)
+    benis = benis(benis, benis/benis(benis), *)
 
-    new_pos = operate_pos(agent.position, step, +)
+    benis = benis(benis.benis, benis, +)
 
-    at_target = false
+    benis = benis
 
-    if agent.graph_position isa Int64 && pos_norm(step) > 0
-        # Stepping away from node 
-        new_graph_pos = Graphs.SimpleEdge(agent.graph_position, t.id)
-    elseif agent.graph_position isa AbstractEdge && pos_norm(diff) == step_size
-        # Stepping along edge, arrived at a (potentially intermediate) target
-        new_graph_pos = t.id
-        if t.id == target 
-            at_target = true
-        end
-    else
-        # Stepping along edge, not arrived at target
-        new_graph_pos = agent.graph_position
-    end
+    benis benis.benis benis benis && benis(benis) > benis
+        # benis benis benis benis 
+        benis = benis.benis(benis.benis, benis.benis)
+    benis benis.benis benis benis && benis(benis) == benis
+        # benis benis benis, benis benis benis (benis benis) benis
+        benis = benis.benis
+        benis benis.benis == benis 
+            benis = benis
+        benis
+    benis
+        # benis benis benis, benis benis benis benis
+        benis = benis.benis
+    benis
 
-    return new_pos, new_graph_pos, at_target
+    benis benis, benis, benis
 
-end
+benis
 
-end
+benis
