@@ -1,8 +1,4 @@
 ## MAGESim
-This project is available under the MIT license (see LICENSE.txt)
-For questions, comments, or suggestions, contact me at
-github.com/jward0
-james.c.ward@bristol.ac.uk
 
 ## Interface with PettingZoo ParallelEnv API
 ### Limitations
