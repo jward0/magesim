@@ -1,5 +1,26 @@
 ## MAGESim
 
+## Modification guide
+### Agents
+#### Internal state
+The `AgentValues` type, in `src/utils/types.jl`, is a catch-all composite type for user-defined agent values beyond what exists in the `AgentState` type. This includes any internal states, or additional observations as discussed under the Observation heading.
+#### Observation
+`observe_world!()` in `src/agent/agent.jl` governs how agents generate a believed world state from the true world state and the state of the agent. This world state belief exists as `AgentState.world_state_belief::Union{WorldState, Nothing}`. Any observations or beliefs that an agent may make beyond what exists in `WorldState` can be included in the `AgentValues` type. This function should typically result in the agent updating its `world_state_belief` field, and its `AgentValues` field if needed. It may also result in enqueuing a message to its outbox, as discussed under the Message passing heading. If line-of-sight checking is desired during observation, `check_los()` in `src/utils/los_checker.jl` provides this.
+#### Decision making
+`make_decisions!()` in `src/agent/agent.jl` governs how agents select actions from their own state, observations, and beliefs, and any messages received from other agents. This function should always result in an action being enqueued to the agent's action queue. It may also result in enqueuing a message to its outbox, as discussed under the Message passing heading.
+#### Action types 
+The action types in `src/utils/types.jl` are used to determine agent behaviour during calls to the `agent_step!()` function. The three default actions are `WaitAction`, which does nothing for one timestep and is subsequently dequeued, `MoveToAction`, which takes one step towards the target and is not dequeued until the target is reached, and `StepTowardsAction`, which takes one step towards the target and is subsequently dequeued. Note that actions as described here are what governs the movement of the agents in the world - decision making and message passing are not actions and occur independently.
+#### Message passing
+`pass_messages!()` in `src/agent/message_passer.jl` governs distribution of messages from agent outboxes to agent inboxes. By default, this is called once per timestep (in `step_agents!()` in `src/agent/agent_handler.jl`) after all agents have called `make_decision!()`, `agent_step!()` and `observe_world!()`. If desired, it can also be called inbetween these functions. Agents can add messages to their outboxes at any point, but they will only be passed to their targets the next time `pass_messages!()` is called. If desired, agents can be given limited broadcast ranges, and line-of-sight checking can be provided with `check_los()` in `src/utils/los_checker.jl`.
+#### Message types
+Message types in `src/utils/types.jl` govern what messages are available to be passed between agents. The default provided `StringMessage` provides a useful template, as custom message types are expected to contain `source` and `targets` fields identical to those in `StringMessage`, but the `message` field can be any type or composite type desired by the user.
+### Environments
+#### Node states
+#### Mutating the map
+#### Reward allocation
+### Logging
+### Map creation
+
 ## Interface with PettingZoo ParallelEnv API
 ### Limitations
 When using the provided wrapper to create a PettingZoo ParallelEnv object that wraps the simulator code, there are several restrictions that are not otherwise present that must be observed.
