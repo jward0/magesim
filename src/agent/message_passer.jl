@@ -26,6 +26,7 @@ function pass_messages!(agents::Array{AgentState, 1}, world::WorldState, check_l
                                  agent.comm_range)
                         
                         enqueue!(agent[id].inbox, message)
+                    end
                 else
                     if pos_distance(agent.position, agents[id].position) <= agent.comm_range && id != agent.id
                         enqueue!(agents[id].inbox, message)               
