@@ -14,12 +14,22 @@ The action types in `src/utils/types.jl` are used to determine agent behaviour d
 `pass_messages!()` in `src/agent/message_passer.jl` governs distribution of messages from agent outboxes to agent inboxes. By default, this is called once per timestep (in `step_agents!()` in `src/agent/agent_handler.jl`) after all agents have called `make_decision!()`, `agent_step!()` and `observe_world!()`. If desired, it can also be called inbetween these functions. Agents can add messages to their outboxes at any point, but they will only be passed to their targets the next time `pass_messages!()` is called. If desired, agents can be given limited broadcast ranges, and line-of-sight checking can be enabled with an optional argument.
 #### Message types
 Message types in `src/utils/types.jl` govern what messages are available to be passed between agents. The default provided `StringMessage` provides a useful template, as custom message types are expected to contain `source` and `targets` fields identical to those in `StringMessage`, but the `message` field can be any type or composite type desired by the user.
-### Environments
+### World
+To guarantee thread safety, the `WorldState` composite type is immutable. As such, world updates must be handled by creating new instances of the `WorldState` type with updated fields. This should only occur in the `world_step()` function in `src/world/world.jl`.
 #### Node states
+The `NodeValues` type, in `src/utils/types.jl`, is a catch-all composite type for user-defined agent values beyond what exists in the `AgentState` type. Note that if the PettingZoo wrapper is being used, specific restrictions apply on the contents of NodeValues - fields must be of type `String`, `Int`, `Float`, `Bool`, or 1-d `Array` of these types.
 #### Mutating the map
+Adding or removing nodes or edges from the map can be accomplished by generating a new instance of the `WorldState` type with modified `nodes`, `n_nodes`, `map`, and `paths` fields. Currently there is no tool implemented to assist with this, but it's on the TODO list.
 #### Reward allocation
+Rewards (if desired) must be calculated in the `world_step()` function in `src/world/world.jl` and returned as a vector of floats.
 ### Logging
+By default, node and agent data is logged every timestep, bu the `log()` methods in `src/utils/logger.jl`. Making it easier to modify these to assist with custom logging is on the TODO list.
 ### Map creation
+Maps are stored in the `maps` directory, and consist of a `.info` file defining general information, a `.json` file containing node information, and optionally a `.pgm` file containing a black-and-white obstacle map. A map named `example`, taken from ROS Patrolling Sim `(http://wiki.ros.org/patrolling_sim)` exists here and may be used for reference. The `.info` file contains the filename of the `.json` being used, and optionally the filename of the obstacle map and its scale factor (world scale/pixel scale), formatted as a json object. The `.json` file describes all nodes, including Cartesian positions, neighbours in the graph, and values to populate the `NodeValues` type. Standard nodes must be numbered sequentially from `1` upwards. Note the existence of nodes labelled with consecutively decreasing negative numbers, referred to in the code as `DummyNode` - these exist purely as points in space that graph edges pass through (eg. if a straight path between connected nodes is not desired), do not contain any values, and are not interacted with by agents.
+
+To aid the process of constructing map jsons, `tools/map_csv_to_json.jl` has been provided. Running this with arguments of map name, filepath to node positions csv, filepath to adjacency matrix csv (see `maps/sample_adj.csv` and `maps/sample_pos.csv` for formatting details) will generate a valid map json for the given graph. Note that dummy nodes and node values must still be added manually.
+
+Obstacle maps must be provided as a black-and-white `.pgm` file, where black represents impassable obstacles and white represents free space. Take care to ensure that the scale factor you provide has been correctly calculated as world position / image pixel coordinates.
 
 ## Interface with PettingZoo ParallelEnv API
 ### Limitations
