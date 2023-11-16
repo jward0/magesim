@@ -2,8 +2,10 @@ module Agent
 
 import ..Types: AgentState, WorldState, Position, AbstractAction, WaitAction, MoveToAction, StepTowardsAction, StringMessage
 import ..AgentDynamics: calculate_next_position
+import ..Utils: get_neighbours
 
 using DataStructures
+using Graphs, SimpleWeightedGraphs, LinearAlgebra
 
 """
     agent_step!(agent::AgentState, world::WorldState)
@@ -66,13 +68,59 @@ internal values
 """
 function make_decisions!(agent::AgentState)
 
+    # Read ArrivedAtNodeMessages to update idleness and intention logs
     while !isempty(agent.inbox)
         message = dequeue!(agent.inbox)
+        if message isa ArrivedAtNodeMessage
+            agent.AgentValues.idleness_log[message.message[1]] = 0.0
+            agent.AgentValues.intention_log[message.message[1]] -= 1
+            agent.AgentValues.intention_log[message.message[2]] += 1
+        end
     end
 
-    if !isnothing(agent.world_state_belief)
-        enqueue!(agent.action_queue, MoveToAction(rand(1:agent.world_state_belief.n_nodes)))
+    # If no action in progress, select node to move towards
+    if isempty(agent.action_queue)
+
+        neighbours = get_neighbours(agent.graph_position, agent.world_state_belief.map)
+
+        if length(neighbours) == 1
+            enqueue!(agent.action_queue, MoveToAction(neighbours[1]))
+        elseif not isa Int64(agent.graph_position)
+            # Catch the potential problem of an agent needing a new action
+            # while midway between two nodes (not covered by algo) - 
+            # solution to this is just to pick one
+            enqueue!(agent.action_queue, MoveToAction(neighbours[1]))
+        else
+            # Do SEBS
+            gains = map(n -> calculate_gain(n, agent), neighbours)
+            posteriors = map(g -> calculate_posterior(g, agent), gains)
+            intention_weights = map(n -> calculate_intention_weight(n, agent), agent.AgentValues.intention_log)
+            final_posteriors = map(*, posteriors, intention_weights)
+            enqueue!(agent.action_queue, MoveToAction(neighbours[argmax(final_posteriors)]))
+        end
     end
+    
+end
+
+function calculate_gain(node::Int64, agent::AgentState)
+    return agent.AgentValues.idleness_log[node] / get_weight(agent.world_state_belief.map, agent.graph_position, node)
+end
+
+function calculate_posterior(gain::Float, agent::AgentState)
+    g1 = agent.AgentValues.sebs_gains[1]
+    g2 = agent.AgentValues.sebs_gains[2]
+
+    if gain >= g2
+        return 1.0
+    else
+        return g1 * 2.7183^((gain/g2) * log(1/g1))
+    end
+end
+
+function calculate_intention_weight(n_intentions::Int64, agent::AgentState)
+
+    n_agents = agent.AgentValues.n_agents_belief
+    return 2^(n_agents - n_intentions)/(2^n_agents - 1)
 end
 
 end

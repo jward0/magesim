@@ -55,9 +55,7 @@ Base.@kwdef struct NodeValues
 
     If you do not wish to use the PettingZoo wrapper, you may disregard the above comments.
     """
-    value_string::String = "10"
-    value_arr::Array{Int64} = [1, 2, 3]
-    value_float::Float64 = 0.1
+    idleness::Float64 = 0.0
 
 end
 
@@ -132,8 +130,11 @@ end
 
 # --- Agent types ---
 
-struct AgentValues
-    example_value::Nothing
+mutable struct AgentValues
+    intention_log::Array{Integer, 1}
+    idleness_log::Array{Float, 1}
+    sebs_gains::Tuple{Float, Float}
+    n_agents_belief::Int64
 end
 
 mutable struct AgentState
@@ -157,12 +158,13 @@ end
 
 # --- Message types ---
 
-struct StringMessage <: AbstractMessage
+struct ArrivedAtNodeMessage <: AbstractMessage
     source::Int64
     targets::Union{Array{Int64, 1}, Nothing}
-    message::String
+    # Node arrived at, next target
+    message::(Int64, Int64)
 
-    function StringMessage(agent::AgentState, targets::Union{Array{Int64, 1}, Nothing}, message::String)
+    function ArrivedAtNodeMessage(agent::AgentState, targets::Union{Array{Int64, 1}, Nothing}, message::(Int64, Int64))
 
         new(agent.id, targets, message)
     end

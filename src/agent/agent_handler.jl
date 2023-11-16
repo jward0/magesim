@@ -17,6 +17,7 @@ function spawn_agents(agent_count::Int64, start_nodes::Array{Int64, 1}, world::W
 
     for i = 1:agent_count
         agents[i] = AgentState(i, start_nodes[i], world.nodes[i].position, nothing)
+        agents[i].AgentValues.sebs_gains = (0.1, 100.0)
     end
 
     return agents

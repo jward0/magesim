@@ -1,7 +1,7 @@
 module AgentDynamics
 
 import ..Types: Position, WorldState, AgentState
-import ..Utils: pos_distance, operate_pos, pos_norm
+import ..Utils: pos_distance, operate_pos, pos_norm, get_neighbours
 using Graphs, SimpleWeightedGraphs, LinearAlgebra
 
 """
@@ -23,17 +23,24 @@ function calculate_next_position(agent::AgentState, target::Int64, world::WorldS
 
     # Get list of valid immediate targets
 
-    if agent.graph_position isa Int64
-        if target == agent.graph_position
-            # Break early if already at target
-            return agent.position, agent.graph_position, true
-        end
-        neighbours = neighbors(world.map, agent.graph_position)
-    elseif has_edge(world.map, dst(agent.graph_position), src(agent.graph_position))
-        neighbours = [src(agent.graph_position), dst(agent.graph_position)]
-    else
-        neighbours = [dst(agent.graph_position)]
+    if agent.graph_position isa Int64 && target == agent.graph_position
+        # Break early if already at target
+        return agent.position, agent.graph_position, true
     end
+
+    neighbours = get_neighbours(agent.graph_position, world.map)
+
+    # if agent.graph_position isa Int64
+    #     if target == agent.graph_position
+    #        # Break early if already at target
+    #         return agent.position, agent.graph_position, true 
+    #     end
+    #     neighbours = neighbors(world.map, agent.graph_position)
+    # elseif has_edge(world.map, dst(agent.graph_position), src(agent.graph_position))
+    #     neighbours = [src(agent.graph_position), dst(agent.graph_position)]
+    # else
+    #     neighbours = [dst(agent.graph_position)]
+    # end
 
     # Select immediate node target
 
