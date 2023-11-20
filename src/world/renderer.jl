@@ -63,8 +63,6 @@ function update_window!(world_state::WorldState, agents::Array{AgentState, 1}, a
 
         aspect_ratio = (upper_lims[1] - lower_lims[1]) / (upper_lims[2] - lower_lims[2])
 
-        println(ne(world_state.map))
-
         # Draw graph
         graphplot(world_state.map, 
         curves=false, 
