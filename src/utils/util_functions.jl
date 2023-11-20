@@ -19,13 +19,29 @@ function operate_pos(p::Position, n::Number, f)
     return Position(f(p.x, n), f(p.y, n))
 end
 
-function get_neighbours(agent_pos::Union{AbstractEdge, Int64}, map::AbstractGraph)
+function get_neighbours(agent_pos::Union{AbstractEdge, Int64}, world::WorldState, no_dummy_nodes::Bool)
     if agent_pos isa Int64
-        neighbours = neighbors(map, agent_pos)
-    elseif has_edge(map, dst(agent_pos), src(agent_pos))
+        neighbours = neighbors(world.map, agent_pos)
+    elseif has_edge(world.map, dst(agent_pos), src(agent_pos))
         neighbours = [src(agent_pos), dst(agent_pos)]
     else
-        neighbours = [dst(agent_pos)]
+        return [dst(agent_pos)]
     end
+    # Dummy node check - ensures that only real nodes will be returned
+    if no_dummy_nodes
+        for i in 1:length(neighbours)
+            if neighbours[i] > world.n_nodes
+                next_neighbours  = neighbors(world.map, neighbours[i])
+                for j in 1:length(next_neighbours)
+                    if !(next_neighbours[j] in neighbours)
+                        neighbours[i] = next_neighbours[j]
+                    end
+                end
+            end
+        end
+    end
+    
+    return neighbours
 end
 
+end

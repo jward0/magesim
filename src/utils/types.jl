@@ -55,6 +55,7 @@ Base.@kwdef struct NodeValues
 
     If you do not wish to use the PettingZoo wrapper, you may disregard the above comments.
     """
+    value_string::String = "10"
     idleness::Float64 = 0.0
 
 end
@@ -131,10 +132,14 @@ end
 # --- Agent types ---
 
 mutable struct AgentValues
-    intention_log::Array{Integer, 1}
-    idleness_log::Array{Float, 1}
-    sebs_gains::Tuple{Float, Float}
+    intention_log::Array{Int64, 1}
+    idleness_log::Array{Float64, 1}
+    sebs_gains::Tuple{Float64, Float64}
     n_agents_belief::Int64
+
+    function AgentValues(g1::Float64, g2::Float64, n_agents::Int64, n_nodes::Int64)
+        new(zeros(Int64, n_nodes), zeros(Float64, n_nodes), (g1, g2), n_agents)
+    end
 end
 
 mutable struct AgentState
@@ -150,9 +155,10 @@ mutable struct AgentState
     outbox::Queue{AbstractMessage}
     world_state_belief::Union{WorldState, Nothing}
 
-    function AgentState(id::Int64, start_node_idx::Int64, start_node_pos::Position, values::Nothing)
+    function AgentState(id::Int64, start_node_idx::Int64, start_node_pos::Position, n_agents::Int64, n_nodes::Int64, custom_config::Array{Float64, 1})
 
-        new(id, start_node_pos, AgentValues(values), Queue{AbstractAction}(), start_node_idx, 1.0, ∞, 10.0, Queue{AbstractMessage}(), Queue{AbstractMessage}(), nothing)    
+        values = AgentValues(custom_config[1], custom_config[2], n_agents, n_nodes)
+        new(id, start_node_pos, values, Queue{AbstractAction}(), start_node_idx, 1.0, ∞, 10.0, Queue{AbstractMessage}(), Queue{AbstractMessage}(), nothing)    
     end
 end
 
@@ -162,9 +168,20 @@ struct ArrivedAtNodeMessage <: AbstractMessage
     source::Int64
     targets::Union{Array{Int64, 1}, Nothing}
     # Node arrived at, next target
-    message::(Int64, Int64)
+    message::Tuple{Int64, Int64}
 
-    function ArrivedAtNodeMessage(agent::AgentState, targets::Union{Array{Int64, 1}, Nothing}, message::(Int64, Int64))
+    function ArrivedAtNodeMessage(agent::AgentState, targets::Union{Array{Int64, 1}, Nothing}, message::Tuple{Int64, Int64})
+
+        new(agent.id, targets, message)
+    end
+end
+
+struct StringMessage <: AbstractMessage
+    source::Int64
+    targets::Union{Array{Int64, 1}, Nothing}
+    message::String
+
+    function StringMessage(agent::AgentState, targets::Union{Array{Int64, 1}, Nothing}, message::String)
 
         new(agent.id, targets, message)
     end

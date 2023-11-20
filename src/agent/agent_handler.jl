@@ -11,13 +11,13 @@ using DataStructures
 
 Create agents at specified nodes in the world and return them in an array
 """
-function spawn_agents(agent_count::Int64, start_nodes::Array{Int64, 1}, world::WorldState)
+function spawn_agents(custom_config::Array{Float64, 1}, agent_count::Int64, start_nodes::Array{Int64, 1}, world::WorldState)
 
     agents = Array{AgentState, 1}(undef, agent_count)
 
     for i = 1:agent_count
-        agents[i] = AgentState(i, start_nodes[i], world.nodes[i].position, nothing)
-        agents[i].AgentValues.sebs_gains = (0.1, 100.0)
+        agents[i] = AgentState(i, start_nodes[i], world.nodes[i].position, agent_count, world.n_nodes, custom_config)
+        observe_world!(agents[i], world)
     end
 
     return agents

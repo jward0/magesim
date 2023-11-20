@@ -1,6 +1,6 @@
 module Agent
 
-import ..Types: AgentState, WorldState, Position, AbstractAction, WaitAction, MoveToAction, StepTowardsAction, StringMessage
+import ..Types: AgentState, WorldState, Position, AbstractAction, WaitAction, MoveToAction, StepTowardsAction, StringMessage, ArrivedAtNodeMessage
 import ..AgentDynamics: calculate_next_position
 import ..Utils: get_neighbours
 
@@ -56,8 +56,6 @@ world state, and generate messages to send to other agents
 """
 function observe_world!(agent::AgentState, world::WorldState)
     agent.world_state_belief = world
-
-    enqueue!(agent.outbox, StringMessage(agent, nothing, string(agent.id)))
 end
 
 """
@@ -81,11 +79,11 @@ function make_decisions!(agent::AgentState)
     # If no action in progress, select node to move towards
     if isempty(agent.action_queue)
 
-        neighbours = get_neighbours(agent.graph_position, agent.world_state_belief.map)
+        neighbours = get_neighbours(agent.graph_position, agent.world_state_belief, true)
 
         if length(neighbours) == 1
             enqueue!(agent.action_queue, MoveToAction(neighbours[1]))
-        elseif not isa Int64(agent.graph_position)
+        elseif !isa(agent.graph_position, Int64)
             # Catch the potential problem of an agent needing a new action
             # while midway between two nodes (not covered by algo) - 
             # solution to this is just to pick one
@@ -94,7 +92,7 @@ function make_decisions!(agent::AgentState)
             # Do SEBS
             gains = map(n -> calculate_gain(n, agent), neighbours)
             posteriors = map(g -> calculate_posterior(g, agent), gains)
-            intention_weights = map(n -> calculate_intention_weight(n, agent), agent.AgentValues.intention_log)
+            intention_weights = map(n -> calculate_intention_weight(n, agent), agent.values.intention_log)
             final_posteriors = map(*, posteriors, intention_weights)
             enqueue!(agent.action_queue, MoveToAction(neighbours[argmax(final_posteriors)]))
         end
@@ -103,12 +101,12 @@ function make_decisions!(agent::AgentState)
 end
 
 function calculate_gain(node::Int64, agent::AgentState)
-    return agent.AgentValues.idleness_log[node] / get_weight(agent.world_state_belief.map, agent.graph_position, node)
+    return agent.values.idleness_log[node] / get_weight(agent.world_state_belief.map, agent.graph_position, node)
 end
 
-function calculate_posterior(gain::Float, agent::AgentState)
-    g1 = agent.AgentValues.sebs_gains[1]
-    g2 = agent.AgentValues.sebs_gains[2]
+function calculate_posterior(gain::Float64, agent::AgentState)
+    g1 = agent.values.sebs_gains[1]
+    g2 = agent.values.sebs_gains[2]
 
     if gain >= g2
         return 1.0
@@ -119,7 +117,7 @@ end
 
 function calculate_intention_weight(n_intentions::Int64, agent::AgentState)
 
-    n_agents = agent.AgentValues.n_agents_belief
+    n_agents = agent.values.n_agents_belief
     return 2^(n_agents - n_intentions)/(2^n_agents - 1)
 end
 

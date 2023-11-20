@@ -28,7 +28,7 @@ function calculate_next_position(agent::AgentState, target::Int64, world::WorldS
         return agent.position, agent.graph_position, true
     end
 
-    neighbours = get_neighbours(agent.graph_position, world.map)
+    neighbours = get_neighbours(agent.graph_position, world, false)
 
     # if agent.graph_position isa Int64
     #     if target == agent.graph_position

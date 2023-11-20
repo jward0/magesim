@@ -63,6 +63,8 @@ function update_window!(world_state::WorldState, agents::Array{AgentState, 1}, a
 
         aspect_ratio = (upper_lims[1] - lower_lims[1]) / (upper_lims[2] - lower_lims[2])
 
+        println(ne(world_state.map))
+
         # Draw graph
         graphplot(world_state.map, 
         curves=false, 
@@ -82,7 +84,6 @@ function update_window!(world_state::WorldState, agents::Array{AgentState, 1}, a
         if !isnothing(world_state.obstacle_map)
             plot!(world_state.obstacle_map, yflip=false, z_order=1)
             # resize!(builder["window1"], 600, 400)
-
         end
 
         # Draw agents and nodes
