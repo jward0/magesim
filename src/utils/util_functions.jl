@@ -21,7 +21,7 @@ end
 
 function get_neighbours(agent_pos::Union{AbstractEdge, Int64}, world::WorldState, no_dummy_nodes::Bool)
     if agent_pos isa Int64
-        neighbours = neighbors(world.map, agent_pos)
+        neighbours = copy(neighbors(world.map, agent_pos))
     elseif has_edge(world.map, dst(agent_pos), src(agent_pos))
         neighbours = [src(agent_pos), dst(agent_pos)]
     else
