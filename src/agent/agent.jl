@@ -56,6 +56,10 @@ world state, and generate messages to send to other agents
 """
 function observe_world!(agent::AgentState, world::WorldState)
     agent.world_state_belief = world
+    agent.values.idleness_log = [i + 1.0 for i in agent.values.idleness_log]
+    if agent.graph_position isa Int64 && agent.graph_position <= world.n_nodes
+        agent.values.idleness_log[agent.graph_position] = 0.0
+    end
 end
 
 """
@@ -70,9 +74,8 @@ function make_decisions!(agent::AgentState)
     while !isempty(agent.inbox)
         message = dequeue!(agent.inbox)
         if message isa ArrivedAtNodeMessage
-            agent.AgentValues.idleness_log[message.message[1]] = 0.0
-            agent.AgentValues.intention_log[message.message[1]] -= 1
-            agent.AgentValues.intention_log[message.message[2]] += 1
+            agent.values.idleness_log[message.message[1]] = 0.0
+            agent.values.intention_log[message.source] = message.message[2]
         end
     end
 
@@ -92,16 +95,23 @@ function make_decisions!(agent::AgentState)
             # Do SEBS
             gains = map(n -> calculate_gain(n, agent), neighbours)
             posteriors = map(g -> calculate_posterior(g, agent), gains)
-            intention_weights = map(n -> calculate_intention_weight(n, agent), agent.values.intention_log)
-            final_posteriors = map(*, posteriors, intention_weights)
-            enqueue!(agent.action_queue, MoveToAction(neighbours[argmax(final_posteriors)]))
+            n_intentions::Array{Int64, 1} = zeros(agent.world_state_belief.n_nodes)
+            for i in agent.values.intention_log
+                if i != 0 n_intentions[i] += 1 end
+            end
+            intention_weights = map(n -> calculate_intention_weight(n, agent), n_intentions)
+            final_posteriors = [posteriors[i] * intention_weights[neighbours[i]] for i in 1:length(posteriors)]
+            target = neighbours[argmax(final_posteriors)]
+            enqueue!(agent.action_queue, MoveToAction(target))
+            enqueue!(agent.outbox, ArrivedAtNodeMessage(agent, nothing, (agent.graph_position, target)))
         end
     end
     
 end
 
 function calculate_gain(node::Int64, agent::AgentState)
-    return agent.values.idleness_log[node] / get_weight(agent.world_state_belief.map, agent.graph_position, node)
+    distance = agent.world_state_belief.paths.dists[agent.graph_position, node]
+    return agent.values.idleness_log[node] / distance
 end
 
 function calculate_posterior(gain::Float64, agent::AgentState)

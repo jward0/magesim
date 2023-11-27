@@ -16,7 +16,7 @@ function spawn_agents(custom_config::Array{Float64, 1}, agent_count::Int64, star
     agents = Array{AgentState, 1}(undef, agent_count)
 
     for i = 1:agent_count
-        agents[i] = AgentState(i, start_nodes[i], world.nodes[i].position, agent_count, world.n_nodes, custom_config)
+        agents[i] = AgentState(i, start_nodes[i], world.nodes[start_nodes[i]].position, agent_count, world.n_nodes, custom_config)
         observe_world!(agents[i], world)
     end
 

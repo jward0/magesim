@@ -41,7 +41,7 @@ end
 
 # --- Node + map types
 
-Base.@kwdef struct NodeValues
+Base.@kwdef mutable struct NodeValues
     """
     For python wrapping purposes, the only types supported in NodeValues are String, Int, Float, Bool, 
     and 1-d Array of these types
@@ -107,7 +107,7 @@ struct WorldState
     map::AbstractGraph
     obstacle_map::Union{Nothing, Array{}}
     scale_factor::Float64
-    paths::Graphs.AbstractPathState  # Has fields dists, parents (for back-to-front navigation)
+    paths::Graphs.FloydWarshallState  # Has fields dists, parents (for back-to-front navigation)
     time::Real
     done::Bool
     
@@ -138,7 +138,7 @@ mutable struct AgentValues
     n_agents_belief::Int64
 
     function AgentValues(g1::Float64, g2::Float64, n_agents::Int64, n_nodes::Int64)
-        new(zeros(Int64, n_nodes), zeros(Float64, n_nodes), (g1, g2), n_agents)
+        new(zeros(Int64, n_agents), zeros(Float64, n_nodes), (g1, g2), n_agents)
     end
 end
 

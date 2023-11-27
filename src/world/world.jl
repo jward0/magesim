@@ -55,7 +55,20 @@ end
 Return updated world state and reward allocated to agents
 """
 function world_step(world_state::WorldState, agents::Array{AgentState, 1})
-    updated_world_state = WorldState(world_state.nodes, world_state.n_nodes, world_state.map, world_state.obstacle_map, world_state.scale_factor, world_state.paths, world_state.time + 1, world_state.done)
+
+    nodes = copy(world_state.nodes)
+    for node in nodes
+        if node isa Node
+            node.values.idleness += 1.0
+            for agent in agents
+                if agent.graph_position isa Int64 && agent.graph_position == node.id
+                    node.values.idleness = 0.0
+                end
+            end
+        end
+    end
+
+    updated_world_state = WorldState(nodes, world_state.n_nodes, world_state.map, world_state.obstacle_map, world_state.scale_factor, world_state.paths, world_state.time + 1, world_state.done)
     
     rewards = zeros(Float64, length(agents))
 
