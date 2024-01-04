@@ -78,7 +78,7 @@ function step_agents!(agents::Array{AgentState, 1},
         end   
     end
 
-    pass_messages!(agents)
+    pass_messages!(agents, world)
 
 end
 
@@ -136,7 +136,7 @@ function step_agents_(agents::Array{AgentState, 1},
         end   
     end
 
-    pass_messages!(agents)
+    pass_messages!(agents, world)
 
 end
 
