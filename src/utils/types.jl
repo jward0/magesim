@@ -1,6 +1,6 @@
 module Types
 
-using Graphs, DataStructures, Infinity
+using Graphs, DataStructures, Infinity, Dates
 
 # --- Abstract types ---
 
