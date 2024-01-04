@@ -5,22 +5,6 @@ using Graphs, SimpleWeightedGraphs
 using Dates
 
 """
-    new_logger()
-
-Create required log directory and return new logger
-"""
-function new_logger()
-
-    logger = Logger(string("logs/", Dates.format(now(), "yyyymmdd_HH:MM:SS/")))
-
-    if !isdir(logger.log_directory)
-        Base.Filesystem.mkpath(logger.log_directory)
-    end
-
-    return logger
-end
-
-"""
     log(target::AgentState, logger::Logger, timestep::Int)
 
 Log AgentState data
