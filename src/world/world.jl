@@ -78,7 +78,7 @@ end
 """
     stop_world()
 
-Safely stop the simulation and close the GUI
+Safely stop the simulation
 """
 function stop_world()
     nothing

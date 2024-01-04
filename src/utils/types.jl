@@ -1,6 +1,6 @@
 module Types
 
-using Graphs, DataStructures, Infinity
+using Graphs, DataStructures, Infinity, Dates
 
 # --- Abstract types ---
 
@@ -19,6 +19,17 @@ end
 
 struct Logger
     log_directory::String
+
+    function Logger()
+
+        log_directory = string("logs/", Dates.format(now(), "yyyymmdd_HH:MM:SS/"))
+
+        if !isdir(log_directory)
+            Base.Filesystem.mkpath(log_directory)
+        end
+
+        new(log_directory)
+    end
 end
 
 # --- Agent action types ---

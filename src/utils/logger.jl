@@ -5,25 +5,9 @@ using Graphs, SimpleWeightedGraphs
 using Dates
 
 """
-    new_logger()
-
-Create required log directory and return new logger
-"""
-function new_logger()
-
-    logger = Logger(string("logs/", Dates.format(now(), "yyyymmdd_HH:MM:SS/")))
-
-    if !isdir(logger.log_directory)
-        Base.Filesystem.mkpath(logger.log_directory)
-    end
-
-    return logger
-end
-
-"""
     log(target::AgentState, logger::Logger, timestep::Int)
 
-Log AgentState data
+Log individual AgentState data
 """
 function log(target::AgentState, logger::Logger, timestep::Int)
     fpath = string(logger.log_directory, "agent_", string(target.id), ".csv") 
@@ -51,23 +35,27 @@ function log(target::AgentState, logger::Logger, timestep::Int)
 end
 
 """
-    log(target::Node, logger::Logger, timestep::Int)
+    log(target::Array{AgentState, 1}, logger::Logger, timestep::Int)
 
-Log Node data
+Log multiple instances of AgentState data
 """
-function log(target::Node, logger::Logger, timestep:: Int)
-    fpath = string(logger.log_directory, "node_", string(target.id), ".csv")
+function log(target::Array{AgentState, 1}, logger::Logger, timestep::Int)
+   
+    header_contents = ["x$n,y$n" for n in [1:1:length(target)...]]
+    positions = vcat([[agent.position.x, agent.position.y] for agent in target]...)
+
+
+    fpath = string(logger.log_directory, "agent_positions.csv") 
 
     if !isfile(fpath)
-        header = "timestep, value"
+        header = make_line("timestep", header_contents)
         open(fpath, "w") do file
             write(file, header)
             write(file,"\n")
         end
     end
 
-    csv_line = string(string(timestep, target.values.value_string))
-
+    csv_line = make_line(timestep, string.(positions))
     open(fpath, "a") do file
         write(file, csv_line)
         write(file,"\n")
@@ -80,22 +68,36 @@ end
 Log WorldState data
 """
 function log(target::WorldState, logger::Logger, timestep::Int)
-    fpath = string(logger.log_directory, "world.csv") 
+
+    header_contents = ["node_$n" for n in [1:1:target.n_nodes...]]
+    idlenesses = [node.values.idleness for node in target.nodes if node isa Node]
+
+    fpath = string(logger.log_directory, "idleness.csv") 
 
     if !isfile(fpath)
-        header = "timestep"
+        header = make_line("timestep", string.(header_contents))
         open(fpath, "w") do file
             write(file, header)
             write(file,"\n")
         end
     end
 
-    csv_line = string(timestep)
+    csv_line = make_line(timestep, string.(idlenesses))
 
     open(fpath, "a") do file
         write(file, csv_line)
         write(file,"\n")
     end
+end
+
+"""
+    Utility functions for formatting
+"""
+function make_line(timestep::Int, contents::Array{String, 1})
+    return join(vcat(string(timestep), contents), ',')
+end
+function make_line(timestep::String, contents::Array{String, 1})
+    return join(vcat(timestep, contents), ',')
 end
 
 end
