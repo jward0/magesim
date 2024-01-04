@@ -1,4 +1,10 @@
+TODO: write ctf_example branch
+
 ## MAGESim
+MAGESim (Multi-Agent Graph Environment Simulator) is, as the name suggests, a multi-agent simulator for graph-structured environments. It is designed to be light-weight and performant, and easily customisable to specific use-cases. The modification guide below will help get you started with customising the simulator for your own purposes, and two example branches (patrolling_example and ctf_example) have been created to demonstrate how the simulator can be used for various purposes. A Python wrapper for the PettingZoo ParallelEnv API for multi-agent reinforcement learning is also provided (see ctf_example branch for an example).
+
+### Limitations
+MAGESim is a fully synchronous simulator. As such, the world and all agents update simultaneously every timestep, and no provision is made for behaviour that does not fit to this discretisation - for example, should an agent reach its target node with some movement remaining for the timestep, the remaining movement will be lost and the agent will not select a new action from its queue until the next timestep.
 
 ## Modification guide
 ### Agents
