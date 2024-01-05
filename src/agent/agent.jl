@@ -39,7 +39,7 @@ function agent_step!(agent::AgentState, world::WorldState)
         new_pos, new_graph_pos, _ = calculate_next_position(agent, action.target, world)
         action_done = true
     else
-        error("Error: no behaviour found for action of type $(nameof(typeof))")
+        error("Error: no behaviour found for action of type $(nameof(typeof(action)))")
     end
 
     agent.position = new_pos
