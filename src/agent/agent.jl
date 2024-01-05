@@ -22,10 +22,15 @@ function agent_step!(agent::AgentState, world::WorldState)
     action = first(agent.action_queue)
 
     if action isa WaitAction
-        # Do nothing for one timestep
+        # Do nothing for one timestep and then decrement wait duration
         new_pos = agent.position
         new_graph_pos = agent.graph_position
-        action_done = true
+        action.duration -= 1
+        if action.duration <= 0
+            action_done = true
+        else
+            action_done = false
+        end
     elseif action isa MoveToAction
         # Move towards target and do not pop action from queue until target reached
         new_pos, new_graph_pos, action_done = calculate_next_position(agent, action.target, world)
@@ -71,6 +76,7 @@ function make_decisions!(agent::AgentState)
     end
 
     if !isnothing(agent.world_state_belief)
+        enqueue!(agent.action_queue, WaitAction(10))
         enqueue!(agent.action_queue, MoveToAction(rand(1:agent.world_state_belief.n_nodes)))
     end
 end

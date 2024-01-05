@@ -34,12 +34,9 @@ end
 
 # --- Agent action types ---
 
-struct WaitAction <: AbstractAction
-    field::Nothing
-
-    function WaitAction()
-        new(nothing)
-    end
+Base.@kwdef mutable struct WaitAction <: AbstractAction
+    # Default wait duration is 1 timestep
+    duration::Int64 = 1
 end
 
 struct MoveToAction <: AbstractAction
