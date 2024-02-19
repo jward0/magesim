@@ -20,7 +20,7 @@ function main(args)
     end
 
     world = create_world(world_fpath, obstacle_map, scale_factor)
-    agents = spawn_agents(custom_config, n_agents, agent_starts, world)
+    agents = spawn_agents(n_agents, agent_starts, world)
     ts = 1/speedup
     actual_speedup = speedup
     gtk_running = true

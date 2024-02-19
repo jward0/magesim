@@ -29,7 +29,7 @@ function load_config(arg::String)
     multithreaded::Bool = config["multithreaded"]
 
     # Custom config loading
-    custom_config::Array{Float64, 1} = config["custom_config"]
+    custom_config::Bool = config["custom_config"]
 
     return headless, world_fpath, obstacle_map, scale_factor, n_agents, agent_starts, speedup, timeout, multithreaded, custom_config
 end

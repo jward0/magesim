@@ -5,7 +5,10 @@ import ..AgentDynamics: calculate_next_position
 import ..Utils: get_neighbours
 
 using DataStructures
+using Flux
 using Graphs, SimpleWeightedGraphs, LinearAlgebra
+using LinearAlgebra
+using Statistics
 
 """
     agent_step!(agent::AgentState, world::WorldState)
@@ -32,7 +35,7 @@ function agent_step!(agent::AgentState, world::WorldState)
         # Move towards target and do not pop action from queue until target reached
         new_pos, new_graph_pos, action_done = calculate_next_position(agent, action.target, world)
     elseif action isa StepTowardsAction
-        # Take one step towards target 
+        # Take one step towards tfalsearget 
         new_pos, new_graph_pos, _ = calculate_next_position(agent, action.target, world)
         action_done = true
     else
@@ -70,65 +73,106 @@ internal values
 """
 function make_decisions!(agent::AgentState)
 
-    # Read ArrivedAtNodeMessages to update idleness and intention logs
-    while !isempty(agent.inbox)
-        message = dequeue!(agent.inbox)
-        if message isa ArrivedAtNodeMessage
-            agent.values.idleness_log[message.message[1]] = 0.0
-            agent.values.intention_log[message.source] = message.message[2]
-        end
-    end
+    # Currently single-agent only: no message handling
 
-    # If no action in progress, select node to move towards
-    if isempty(agent.action_queue)
+    # input[0] is data (shape=n_nodesx2 (distance, idleness))
+    # input[1] is normalised weighted world adjacency matrix (shape=n_nodesxn_nodes)
 
-        neighbours = get_neighbours(agent.graph_position, agent.world_state_belief, true)
+    distances = [agent.world_state_belief.paths.dists[agent.graph_position, node.id] for node in agent.world_state_belief.nodes[1:agent.world_state_belief.n_nodes]]
+    idlenesses = [node.values.idleness for node in agent.world_state_belief.nodes[1:agent.world_state_belief.n_nodes]]
+    node_values = hcat(distances, idlenesses)
 
-        if length(neighbours) == 1
-            enqueue!(agent.action_queue, MoveToAction(neighbours[1]))
-        elseif !isa(agent.graph_position, Int64)
-            # Catch the potential problem of an agent needing a new action
-            # while midway between two nodes (not covered by algo) - 
-            # solution to this is just to pick one
-            enqueue!(agent.action_queue, MoveToAction(neighbours[1]))
-        else
-            # Do SEBS
-            gains = map(n -> calculate_gain(n, agent), neighbours)
-            posteriors = map(g -> calculate_posterior(g, agent), gains)
-            n_intentions::Array{Int64, 1} = zeros(agent.world_state_belief.n_nodes)
-            for i in agent.values.intention_log
-                if i != 0 n_intentions[i] += 1 end
-            end
-            intention_weights = map(n -> calculate_intention_weight(n, agent), n_intentions)
-            final_posteriors = [posteriors[i] * intention_weights[neighbours[i]] for i in 1:length(posteriors)]
-            target = neighbours[argmax(final_posteriors)]
-            enqueue!(agent.action_queue, MoveToAction(target))
-            enqueue!(agent.outbox, ArrivedAtNodeMessage(agent, nothing, (agent.graph_position, target)))
-        end
-    end
-    
-end
-
-function calculate_gain(node::Int64, agent::AgentState)
-    distance = agent.world_state_belief.paths.dists[agent.graph_position, node]
-    return agent.values.idleness_log[node] / distance
-end
-
-function calculate_posterior(gain::Float64, agent::AgentState)
-    g1 = agent.values.sebs_gains[1]
-    g2 = agent.values.sebs_gains[2]
-
-    if gain >= g2
-        return 1.0
+    if agent.world_state_belief.map isa SimpleWeightedDiGraph
+        a = agent.world_state_belief.map.weights
+        c = mean(a[a .!= 0])
+        adjacency_matrix = a / c
     else
-        return g1 * 2.7183^((gain/g2) * log(1/g1))
+        adjacency_matrix = adjacency_matrix(agent.world_state_belief.map)
     end
+
+    # TODO: implement a way to extract adjacency matrix of the map without running into
+    # snags with dummy nodes (current problem)
+    println(adjacency_matrix)
+
+    model_in = [node_values, adjacency_matrix]
+
+    model_out = forward_nn(model_in)
+    println(model_out)
+    target = argmax(output)
+    enqueue!(agent.action_queue, StepTowardsAction(target))
+
 end
 
-function calculate_intention_weight(n_intentions::Int64, agent::AgentState)
+function forward_nn(input)
 
-    n_agents = agent.values.n_agents_belief
-    return 2^(n_agents - n_intentions)/(2^n_agents - 1)
+    data = input[1]
+    adj = input[2]
+    unweighted_adj = copy(adj)
+    unweighted_adj[adj .!= 0] .= 1
+    repeated_edge = reshape(Matrix{Float64}(I, size(adj)), (size(adj)...,1))
+
+    # repeated_data has shape (n_nodes, n_nodes, 2)
+    repeated_data = repeat(
+        reshape(data, (size(data)[1], 1, size(data)[2])), 
+        outer=[1, size(data)[1], 1])
+
+    # combined_data has shape (n_nodes, n_nodes, 3)
+    combined_data = cat(dims=3, repeated_data, repeated_edge)
+    println("+++++++++++++++++++++++++++++")
+    println(data)
+    println(adj)
+    println(combined_data)
+
+    sc = Matrix(sd_out(sd_1(repeated_data)))
+    nc = Matrix(unweighted_adj) * Matrix(nd_out(nd_1(combined_data)))
+
+    output = leakyrelu(c0(sc) + c1(nc), 0.3)
+
+    println(output)
+
+    return output
+
+end
+
+function sd_1(input)
+    out = [[[-0.02560344 * d[1] +  0.47448905 * d[2], 
+              0.37850753 * d[1] + -0.44805954 * d[2], 
+              0.72529513 * d[1] + -1.18498965 * d[2], 
+              0.73166021 * d[1] +  0.71390661 * d[2]] 
+            for d in r] 
+           for r in input]
+    
+    return leakyrelu(out, 0.3)
+end
+
+function sd_out(input)
+    out = [[-2.15976341 * d[1] + 1.89191872 * d[2] + 1.3302514 * d[3] + 1.58470547 * d[4] for d in r] for r in input]
+    return leakyrelu(out, 0.3)
+end
+
+function nd_1(input)
+    out = [[[-0.63064267 * d[1] + -0.66394034 * d[2] +  0.70292034 * d[3], 
+              0.57047792 * d[1] + -0.06849411 * d[2] + -0.43628767 * d[3], 
+              0.79983717 * d[1] + -0.77574031 * d[2] +  0.17639368 * d[3], 
+              0.31979277 * d[1] +  0.23128230 * d[2] +  0.74832512 * d[3],
+             -0.01553424 * d[1] +  0.78119776 * d[2] +  0.32078049 * d[3],
+              0.05096390 * d[1] + -0.74479295 * d[2] + -0.62604261 * d[3]] 
+            for d in r] 
+           for r in input]
+    return leakyrelu(out, 0.3)
+end
+
+function nd_out(input)
+    out = [[-0.16932522 * d[1] + -0.08513338 * d[2] + -2.21655511 * d[3] + 0.74814952 * d[4] + -1.32369776 * d[5] + -0.30468585 * d[6] for d in r] for r in input]
+    return leakyrelu(out, 0.3)
+end
+
+function c0(input)
+    return 1.47268558 * input
+end
+
+function c1(input)
+    return -0.8183988 * input
 end
 
 end

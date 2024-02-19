@@ -1,6 +1,6 @@
 module Types
 
-using Graphs, DataStructures, Infinity, Dates
+using Graphs, DataStructures, Infinity, Dates, Flux
 
 # --- Abstract types ---
 
@@ -145,11 +145,10 @@ end
 mutable struct AgentValues
     intention_log::Array{Int64, 1}
     idleness_log::Array{Float64, 1}
-    sebs_gains::Tuple{Float64, Float64}
     n_agents_belief::Int64
 
-    function AgentValues(g1::Float64, g2::Float64, n_agents::Int64, n_nodes::Int64)
-        new(zeros(Int64, n_agents), zeros(Float64, n_nodes), (g1, g2), n_agents)
+    function AgentValues(n_agents::Int64, n_nodes::Int64)
+        new(zeros(Int64, n_agents), zeros(Float64, n_nodes), n_agents)
     end
 end
 
@@ -166,9 +165,9 @@ mutable struct AgentState
     outbox::Queue{AbstractMessage}
     world_state_belief::Union{WorldState, Nothing}
 
-    function AgentState(id::Int64, start_node_idx::Int64, start_node_pos::Position, n_agents::Int64, n_nodes::Int64, custom_config::Array{Float64, 1})
+    function AgentState(id::Int64, start_node_idx::Int64, start_node_pos::Position, n_agents::Int64, n_nodes::Int64)
 
-        values = AgentValues(custom_config[1], custom_config[2], n_agents, n_nodes)
+        values = AgentValues(n_agents, n_nodes)
         new(id, start_node_pos, values, Queue{AbstractAction}(), start_node_idx, 1.0, ∞, 10.0, Queue{AbstractMessage}(), Queue{AbstractMessage}(), nothing)    
     end
 end
