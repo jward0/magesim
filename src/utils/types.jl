@@ -1,6 +1,6 @@
 module Types
 
-using Graphs, DataStructures, Infinity, Dates, Flux
+using Graphs, SimpleWeightedGraphs, DataStructures, Infinity, Dates, Flux
 
 # --- Abstract types ---
 
@@ -118,6 +118,7 @@ struct WorldState
     map::AbstractGraph
     obstacle_map::Union{Nothing, Array{}}
     scale_factor::Float64
+    adj::Matrix{Float64} # Adjacency matrix of only real nodes
     paths::Graphs.FloydWarshallState  # Has fields dists, parents (for back-to-front navigation)
     time::Real
     done::Bool
@@ -127,15 +128,24 @@ struct WorldState
                         map::AbstractGraph,
                         obstacle_map::Union{Nothing, Array{}},
                         scale_factor::Float64,
-                        paths::Union{Graphs.AbstractPathState, Nothing}=nothing, 
+                        adj::Union{Matrix{Float64}, Nothing}=nothing,
+                        paths::Union{Graphs.AbstractPathState, Nothing}=nothing,
                         time::Float64=0.0, 
                         done::Bool=false)
 
+        # TODO: sort all this out properly
+
+        if adj === nothing
+            new_adj = Matrix(zeros(Float64, (n_nodes, n_nodes)))
+        else
+            new_adj = adj
+        end
+
         if paths === nothing
             generated_paths = floyd_warshall_shortest_paths(map)
-            new(nodes, n_nodes, map, obstacle_map, scale_factor, generated_paths, time, done)
+            new(nodes, n_nodes, map, obstacle_map, scale_factor, new_adj, generated_paths, time, done)
         else
-            new(nodes, n_nodes, map, obstacle_map, scale_factor, paths, time, done)
+            new(nodes, n_nodes, map, obstacle_map, scale_factor, new_adj, paths, time, done)
         end
     end
 end

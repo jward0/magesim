@@ -78,38 +78,97 @@ function make_decisions!(agent::AgentState)
     # input[0] is data (shape=n_nodesx2 (distance, idleness))
     # input[1] is normalised weighted world adjacency matrix (shape=n_nodesxn_nodes)
 
-    distances = [agent.world_state_belief.paths.dists[agent.graph_position, node.id] for node in agent.world_state_belief.nodes[1:agent.world_state_belief.n_nodes]]
-    idlenesses = [node.values.idleness for node in agent.world_state_belief.nodes[1:agent.world_state_belief.n_nodes]]
-    node_values = hcat(distances, idlenesses)
+    if isempty(agent.action_queue) || agent.graph_position isa Int == first(agent.action_queue)
 
-    if agent.world_state_belief.map isa SimpleWeightedDiGraph
-        a = agent.world_state_belief.map.weights
-        c = mean(a[a .!= 0])
-        adjacency_matrix = a / c
-    else
-        adjacency_matrix = adjacency_matrix(agent.world_state_belief.map)
+        c = mean(agent.world_state_belief.adj[agent.world_state_belief.adj .!= 0])
+        adjacency_matrix = agent.world_state_belief.adj / c
+
+        distances = [agent.world_state_belief.paths.dists[agent.graph_position, node.id] for node in agent.world_state_belief.nodes[1:agent.world_state_belief.n_nodes]]
+        idlenesses = [node.values.idleness for node in agent.world_state_belief.nodes[1:agent.world_state_belief.n_nodes]]
+        node_values = hcat(idlenesses/(c*agent.world_state_belief.n_nodes), distances/c)
+
+        model_in = [node_values, adjacency_matrix]
+
+        model_out = vec(forward_nn(model_in))
+        target = argmax(model_out)
+        enqueue!(agent.action_queue, MoveToAction(target))
     end
-
-    # TODO: implement a way to extract adjacency matrix of the map without running into
-    # snags with dummy nodes (current problem)
-    println(adjacency_matrix)
-
-    model_in = [node_values, adjacency_matrix]
-
-    model_out = forward_nn(model_in)
-    println(model_out)
-    target = argmax(output)
-    enqueue!(agent.action_queue, StepTowardsAction(target))
-
 end
 
 function forward_nn(input)
 
     data = input[1]
     adj = input[2]
+
+    """
+    data = [[0.56559504, 3.49180782],
+    [0.5652032 , 2.97984821],
+    [0.56532588, 2.3140171 ],
+    [0.5653524 , 2.40376639],
+    [0.56537381, 3.49788887],
+    [0.04541397, 1.42510632],
+    [0.5652027 , 2.25137478],
+    [0.56560128, 2.80796181],
+    [0.        , 0.        ],
+    [0.56536157, 2.30310981],
+    [0.56560602, 1.1178051 ],
+    [0.01513799, 0.43735239],
+    [0.56564141, 0.77945993],
+    [0.56528495, 1.26236185],
+    [0.56565227, 1.73240754],
+    [0.56542418, 3.09993423],
+    [0.56539575, 2.4633817 ],
+    [0.56555229, 1.6226571 ],
+    [0.56533367, 2.44766656],
+    [0.56533547, 6.05058681],
+    [0.56527313, 4.63644034],
+    [0.56550354, 3.861566  ],
+    [0.56542233, 3.07136286],
+    [0.56530527, 4.93712028],
+    [0.56556039, 4.58591888],
+    [0.56525165, 4.8932201 ],
+    [0.56537269, 4.73047564],
+    [0.56530177, 5.31027176],
+    [0.56555699, 4.52006862]]
+
+    adj = [[0.,0.51195961,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.],
+    [0.51195961,0.,0.,0.,0.51804066,1.5547419,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.],
+    [0.,0.,0.,0.,0.,0.88891078,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.],
+    [0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,1.14140454,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.],
+    [0.,0.51804066,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.],
+    [0.,1.5547419,0.88891078,0.,0.,0.,0.82626846,0.,0.,0.,0.,0.98775393,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.],
+    [0.,0.,0.,0.,0.,0.82626846,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.],
+    [0.,0.,0.,0.,0.,0.,0.,0.,0.,0.50485201,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.],
+    [0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.43735239,0.77945993,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.],
+    [0.,0.,0.,0.,0.,0.,0.,0.50485201,0.,0.,1.18530471,0.,0.,0.,0.,1.09750436,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.],
+    [0.,0.,0.,0.,0.,0.,0.,0.,0.,1.18530471,0.,0.6804527,0.,0.,0.61460244,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.],
+    [0.,0.,0.,0.,0.,0.98775393,0.,0.,0.43735239,0.,0.6804527,0.,0.,0.,0.,0.,0.,1.18530471,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.],
+    [0.,0.,0.,0.,0.,0.,0.,0.,0.77945993,0.,0.,0.,0.,0.48290192,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.],
+    [0.,0.,0.,1.14140454,0.,0.,0.,0.,0.,0.,0.,0.,0.48290192,0.,0.,0.,0.,0.,1.18530471,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.],
+    [0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.61460244,0.,0.,0.,0.,0.,0.73097416,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.],
+    [0.,0.,0.,0.,0.,0.,0.,0.,0.,1.09750436,0.,0.,0.,0.,0.,0.,0.63655253,0.,0.,0.,1.53650611,0.,0.,0.,0.,0.,0.,0.,0.],
+    [0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.73097416,0.63655253,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.],
+    [0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,1.18530471,0.,0.,0.,0.,0.,0.,1.66820663,0.,0.,0.,1.44870576,0.,0.,0.,0.,0.,0.],
+    [0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,1.18530471,0.,0.,0.,1.66820663,0.,0.,0.,0.,0.,0.,0.,0.,2.28280907,0.,0.],
+    [0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,1.32011117,0.,0.],
+    [0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,1.53650611,0.,0.,0.,0.,0.,1.07555428,0.,0.,0.,0.,0.,1.80431854,0.],
+    [0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,1.07555428,0.,0.79020314,0.,0.72435288,0.,0.,0.,0.],
+    [0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,1.44870576,0.,0.,0.,0.79020314,0.,0.,0.,0.,0.,0.,1.44870576],
+    [0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.3512014,0.,0.,0.,0.],
+    [0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.72435288,0.,0.3512014,0.,0.30730122,0.,0.72435288,0.],
+    [0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.30730122,0.,0.,0.,0.],
+    [0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,2.28280907,1.32011117,0.,0.,0.,0.,0.,0.,0.,0.,1.77782157],
+    [0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,1.80431854,0.,0.,0.,0.72435288,0.,0.,0.,0.79020314],
+    [0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,1.44870576,0.,0.,0.,1.77782157,0.79020314,0.]]
+    
+    data = transpose(hcat(data...))
+    adj = hcat(adj...)
+    """
     unweighted_adj = copy(adj)
-    unweighted_adj[adj .!= 0] .= 1
-    repeated_edge = reshape(Matrix{Float64}(I, size(adj)), (size(adj)...,1))
+    unweighted_adj[adj .!= 0.] .= 1.
+    repeated_edge = reshape(copy(adj), (size(adj)...,1))
+
+    # REMEMBER COLUMN MAJOR ORDERING WHEN DEBUGGING
 
     # repeated_data has shape (n_nodes, n_nodes, 2)
     repeated_data = repeat(
@@ -118,52 +177,74 @@ function forward_nn(input)
 
     # combined_data has shape (n_nodes, n_nodes, 3)
     combined_data = cat(dims=3, repeated_data, repeated_edge)
-    println("+++++++++++++++++++++++++++++")
-    println(data)
-    println(adj)
-    println(combined_data)
 
-    sc = Matrix(sd_out(sd_1(repeated_data)))
-    nc = Matrix(unweighted_adj) * Matrix(nd_out(nd_1(combined_data)))
+    sc = sd_out(sd_1(data))
+
+    nc = sum(unweighted_adj .* transpose(nd_out(nd_1(combined_data))), dims=2)
 
     output = leakyrelu(c0(sc) + c1(nc), 0.3)
-
-    println(output)
 
     return output
 
 end
 
 function sd_1(input)
-    out = [[[-0.02560344 * d[1] +  0.47448905 * d[2], 
-              0.37850753 * d[1] + -0.44805954 * d[2], 
-              0.72529513 * d[1] + -1.18498965 * d[2], 
-              0.73166021 * d[1] +  0.71390661 * d[2]] 
-            for d in r] 
-           for r in input]
-    
+
+    out = zeros(Float64, (size(input)[1], 4))
+
+    for i in 1:size(input)[1]
+        d = input[i, :]
+        out[i, 1] = -0.02560344 * d[1] +  0.47448905 * d[2]
+        out[i, 2] =  0.37850753 * d[1] + -0.44805954 * d[2]
+        out[i, 3] =  0.72529513 * d[1] + -1.18498965 * d[2]
+        out[i, 4] =  0.73166021 * d[1] +  0.71390661 * d[2]
+    end
+
     return leakyrelu(out, 0.3)
 end
 
 function sd_out(input)
-    out = [[-2.15976341 * d[1] + 1.89191872 * d[2] + 1.3302514 * d[3] + 1.58470547 * d[4] for d in r] for r in input]
+
+    out = zeros(Float64, (size(input)[1]))
+
+    for i in 1:size(input)[1]
+        d = input[i, :]
+        out[i] = -2.15976341 * d[1] + 1.89191872 * d[2] + 1.3302514 * d[3] + 1.58470547 * d[4]
+    end
+
     return leakyrelu(out, 0.3)
 end
 
 function nd_1(input)
-    out = [[[-0.63064267 * d[1] + -0.66394034 * d[2] +  0.70292034 * d[3], 
-              0.57047792 * d[1] + -0.06849411 * d[2] + -0.43628767 * d[3], 
-              0.79983717 * d[1] + -0.77574031 * d[2] +  0.17639368 * d[3], 
-              0.31979277 * d[1] +  0.23128230 * d[2] +  0.74832512 * d[3],
-             -0.01553424 * d[1] +  0.78119776 * d[2] +  0.32078049 * d[3],
-              0.05096390 * d[1] + -0.74479295 * d[2] + -0.62604261 * d[3]] 
-            for d in r] 
-           for r in input]
+
+    out = zeros(Float64, (size(input)[1], size(input)[2], 6))
+
+    for i in 1:size(input)[1]
+        for j in 1:size(input)[2]
+            d = input[i, j, :]
+            out[i, j, 1] = -0.63064267 * d[1] + -0.66394034 * d[2] +  0.70292034 * d[3]
+            out[i, j, 2] =  0.57047792 * d[1] + -0.06849411 * d[2] + -0.43628767 * d[3]
+            out[i, j, 3] =  0.79983717 * d[1] + -0.77574031 * d[2] +  0.17639368 * d[3]
+            out[i, j, 4] =  0.31979277 * d[1] +  0.23128230 * d[2] +  0.74832512 * d[3]
+            out[i, j, 5] = -0.01553424 * d[1] +  0.78119776 * d[2] +  0.32078049 * d[3]
+            out[i, j, 6] =  0.05096390 * d[1] + -0.74479295 * d[2] + -0.62604261 * d[3]
+        end
+    end
+
     return leakyrelu(out, 0.3)
 end
 
 function nd_out(input)
-    out = [[-0.16932522 * d[1] + -0.08513338 * d[2] + -2.21655511 * d[3] + 0.74814952 * d[4] + -1.32369776 * d[5] + -0.30468585 * d[6] for d in r] for r in input]
+
+    out = zeros(Float64, (size(input)[1], size(input)[2]))
+
+    for i in 1:size(input)[1]
+        for j in 1:size(input)[2]
+            d = input[i, j, :]
+            out[i, j] = -0.16932522 * d[1] + -0.08513338 * d[2] + -2.21655511 * d[3] + 0.74814952 * d[4] + -1.32369776 * d[5] + -0.30468585 * d[6]
+        end
+    end
+
     return leakyrelu(out, 0.3)
 end
 

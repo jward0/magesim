@@ -20,6 +20,9 @@ function operate_pos(p::Position, n::Number, f)
 end
 
 function get_neighbours(agent_pos::Union{AbstractEdge, Int64}, world::WorldState, no_dummy_nodes::Bool)
+    """
+    Returns array of node ids (integers)
+    """
     if agent_pos isa Int64
         neighbours = copy(neighbors(world.map, agent_pos))
     elseif has_edge(world.map, dst(agent_pos), src(agent_pos))
@@ -50,6 +53,22 @@ function get_neighbours(agent_pos::Union{AbstractEdge, Int64}, world::WorldState
     end
 
     return neighbours
+end
+
+function get_real_adj(world::WorldState)
+    """
+    Gets adjacency matrix, skipping dummy nodes
+    """
+
+    adj = Matrix(zeros(Float64, (world.n_nodes, world.n_nodes)))
+
+    for node in world.nodes[1:world.n_nodes]
+        for n in get_neighbours(node.id, world, true)
+            adj[node.id, n] = world.paths.dists[node.id, n]
+        end
+    end
+
+    return adj
 end
 
 end

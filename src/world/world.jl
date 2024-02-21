@@ -1,7 +1,7 @@
 module World
 
 import ..Types: WorldState, AgentState, Node, DummyNode, AbstractNode
-import ..Utils: pos_distance
+import ..Utils: pos_distance, get_real_adj
 using Graphs, SimpleWeightedGraphs
 using JSON
 
@@ -45,7 +45,10 @@ function create_world(fpath::String, obstacle_map::Union{Nothing, Array{}}, scal
 
     graph_map = SimpleWeightedDiGraph(sources, destinations, weights)
 
+    # TODO: This is getting messy with adj needing paths to generate. Sticky circular dependency
     world_state = WorldState(nodes, n_nodes, graph_map, obstacle_map, scale_factor)
+    adj = get_real_adj(world_state)
+    world_state = WorldState(nodes, n_nodes, graph_map, obstacle_map, scale_factor, adj)
     return world_state
 end
 
@@ -68,7 +71,7 @@ function world_step(world_state::WorldState, agents::Array{AgentState, 1})
         end
     end
 
-    updated_world_state = WorldState(nodes, world_state.n_nodes, world_state.map, world_state.obstacle_map, world_state.scale_factor, world_state.paths, world_state.time + 1, world_state.done)
+    updated_world_state = WorldState(nodes, world_state.n_nodes, world_state.map, world_state.obstacle_map, world_state.scale_factor, world_state.adj, world_state.paths, world_state.time + 1, world_state.done)
     
     rewards = zeros(Float64, length(agents))
 

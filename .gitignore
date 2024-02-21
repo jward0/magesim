@@ -23,5 +23,6 @@ docs/site/
 # environment.
 Manifest.toml
 
+models/*
 logs/*
 __pycache__/

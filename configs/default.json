@@ -1,9 +1,9 @@
 {
 	"world": "example",
-	"headless": false,
+	"headless": true,
 	"n_agents": 1,
-	"agent_starts": [1],
-	"speedup": 1000,
+	"agent_starts": [6],
+	"speedup": 100,
 	"timeout": 10000,
 	"multithreaded": false,
 	"custom_config": false
