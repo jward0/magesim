@@ -47,15 +47,15 @@ function calculate_next_position(agent::AgentState, target::Int64, world::WorldS
 
     at_target = false
 
-    if agent.graph_position isa Int64 && pos_norm(step) > 0
-        # Stepping away from node 
-        new_graph_pos = Graphs.SimpleEdge(agent.graph_position, t.id)
-    elseif agent.graph_position isa AbstractEdge && pos_norm(diff) == step_size
+    if pos_norm(diff) == step_size
         # Stepping along edge, arrived at a (potentially intermediate) target
         new_graph_pos = t.id
         if t.id == target 
             at_target = true
-        end
+        end       
+    elseif agent.graph_position isa Int64 && pos_norm(step) > 0
+        # Stepping away from node 
+        new_graph_pos = Graphs.SimpleEdge(agent.graph_position, t.id)
     else
         # Stepping along edge, not arrived at target
         new_graph_pos = agent.graph_position
