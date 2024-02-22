@@ -1,4 +1,4 @@
-using CSV, DataFrames
+using CSV, DataFrames, DataStructures
 import JSON
 
 function main(args)
@@ -13,7 +13,7 @@ function main(args)
         throw(DimensionMismatch("Sizes of inputs do not match"))
     end
 
-    map_dict = Dict{String, Any}()
+    map_dict = OrderedDict{String, Any}()
 
     for node in 1:size(pos, 1)
 
