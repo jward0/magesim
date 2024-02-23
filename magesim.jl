@@ -43,10 +43,10 @@ function main(args)
             end
         end
 
-        if world_running && gtk_running
+        if !headless && (world_running && gtk_running)
             sleep(max(ts-t, 0))
             actual_speedup = 1/max(t, ts)
-        else
+        elseif !world_running
             break
         end
     end
