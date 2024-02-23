@@ -91,6 +91,13 @@ function make_decisions!(agent::AgentState)
 
         model_out = vec(forward_nn(model_in))
         target = argmax(model_out)
+
+        # Prevents sitting still at node
+        if target == agent.graph_position
+            model_out[target] = 0.0
+            target = argmax(model_out)
+        end
+
         enqueue!(agent.action_queue, MoveToAction(target))
     end
 end
