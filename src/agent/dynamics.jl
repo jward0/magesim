@@ -19,7 +19,7 @@ new_graph_pos::Union{AbstractEdge, Int64}, edge or node ID associated with agent
 at_target::Bool, target reached flag
 """
 
-function calculate_next_position(agent::AgentState, target::Int64, world::WorldState)
+function calculate_next_position(agent::AgentState, target::Int64, world::WorldState, blocked_pos::Array{Position, 1})
 
     # Get list of valid immediate targets
 
@@ -56,6 +56,11 @@ function calculate_next_position(agent::AgentState, target::Int64, world::WorldS
     step = operate_pos(diff, step_size/pos_norm(diff), *)
 
     new_pos = operate_pos(agent.position, step, +)
+
+    # Check if it would be colliding with any block points (usually used to handle agent collision)
+    if new_pos in blocked_pos
+        return agent.position, agent.graph_position, false
+    end
 
     at_target = false
 
