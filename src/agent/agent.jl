@@ -15,7 +15,7 @@ using Statistics
 
 Select and perform an action and update agent position and stat accordingly
 """
-function agent_step!(agent::AgentState, world::WorldState)
+function agent_step!(agent::AgentState, world::WorldState, blocked_pos::Array{Position, 1})
 
     # Wait if no other action found
     if isempty(agent.action_queue)
@@ -33,10 +33,10 @@ function agent_step!(agent::AgentState, world::WorldState)
         action_done = true
     elseif action isa MoveToAction
         # Move towards target and do not pop action from queue until target reached
-        new_pos, new_graph_pos, action_done = calculate_next_position(agent, action.target, world)
+        new_pos, new_graph_pos, action_done = calculate_next_position(agent, action.target, world, blocked_pos)
     elseif action isa StepTowardsAction
-        # Take one step towards tfalsearget 
-        new_pos, new_graph_pos, _ = calculate_next_position(agent, action.target, world)
+        # Take one step towards target 
+        new_pos, new_graph_pos, _ = calculate_next_position(agent, action.target, world, blocked_pos)
         action_done = true
     else
         error("Error: no behaviour found for action of type $(nameof(typeof))")
