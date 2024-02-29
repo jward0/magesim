@@ -77,8 +77,6 @@ function make_decisions!(agent::AgentState)
 
     message_received = false
 
-    # Currently single-agent only: no message handling
-
     # input[0] is data (shape=n_nodesx2 (distance, idleness))
     # input[1] is normalised weighted world adjacency matrix (shape=n_nodesxn_nodes)
 
@@ -130,8 +128,6 @@ function make_decisions!(agent::AgentState)
         enqueue!(agent.outbox, PriorityMessage(agent, nothing, model_out))
 
         final_priorities = do_priority_greedy(agent, model_out)
-
-        # println(final_priorities)
 
         # Prevents sitting still at node
         if agent.values.last_visited != 0
