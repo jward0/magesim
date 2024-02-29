@@ -53,7 +53,7 @@ function step_agents!(agents::Array{AgentState, 1},
         # I suppose technically it could be broken out into 2 parts to keep it multithreaded, but would need
         # synchronisation halfway through so might not be worth it for the time saved
         for agent in agents
-            agent_step!(agent, world, [agent.position for agent in agents[1:agent.id]])
+            agent_step!(agent, world, [agent.position for agent in agents[1:agent.id-1]])
         end
     
         Threads.@threads for agent in agents
@@ -72,7 +72,7 @@ function step_agents!(agents::Array{AgentState, 1},
         end
     
         for agent in agents
-            agent_step!(agent, world, [agent.position for agent in agents[1:agent.id]])
+            agent_step!(agent, world, [agent.position for agent in agents[1:agent.id-1]])
         end
     
         for agent in agents
