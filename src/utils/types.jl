@@ -153,12 +153,20 @@ end
 # --- Agent types ---
 
 mutable struct AgentValues
-    intention_log::Array{Int64, 1}
+    priority_log::Array{Float64, 2}
+    priority_weights::Array{Float64, 1}
     idleness_log::Array{Float64, 1}
+    agent_dists_log::Array{Float64, 1}
     n_agents_belief::Int64
+    last_visited::Int64
 
     function AgentValues(n_agents::Int64, n_nodes::Int64)
-        new(zeros(Int64, n_agents), zeros(Float64, n_nodes), n_agents)
+        new(zeros(Float64, (n_agents, n_nodes)), 
+            zeros(Float64, n_nodes), 
+            zeros(Float64, n_nodes),
+            zeros(Float64, n_agents),
+            n_agents,
+            0)
     end
 end
 
@@ -184,13 +192,34 @@ end
 
 # --- Message types ---
 
-struct ArrivedAtNodeMessage <: AbstractMessage
+struct PriorityMessage <: AbstractMessage
     source::Int64
     targets::Union{Array{Int64, 1}, Nothing}
-    # Node arrived at, next target
-    message::Tuple{Int64, Int64}
+    message::Array{Float64, 1}
 
-    function ArrivedAtNodeMessage(agent::AgentState, targets::Union{Array{Int64, 1}, Nothing}, message::Tuple{Int64, Int64})
+    function PriorityMessage(agent::AgentState, targets::Union{Array{Int64, 1}, Nothing}, message::Array{Float64, 1})
+
+        new(agent.id, targets, message)
+    end
+end
+
+struct IdlenessLogMessage <: AbstractMessage
+    source::Int64
+    targets::Union{Array{Int64, 1}, Nothing}
+    message::Array{Float64, 1}
+
+    function IdlenessLogMessage(agent::AgentState, targets::Union{Array{Int64, 1}, Nothing}, message::Array{Float64, 1})
+
+        new(agent.id, targets, message)
+    end
+end
+
+struct PosMessage <: AbstractMessage
+    source::Int64
+    targets::Union{Array{Int64, 1}, Nothing}
+    message::Position
+
+    function PosMessage(agent::AgentState, targets::Union{Array{Int64, 1}, Nothing}, message::Position)
 
         new(agent.id, targets, message)
     end

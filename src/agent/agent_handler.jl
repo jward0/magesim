@@ -51,7 +51,7 @@ function step_agents!(agents::Array{AgentState, 1},
         end
     
         for agent in agents
-            agent_step!(agent, world, [agent.position for agent in agents[1:agent.id]])
+            agent_step!(agent, world, [agent.position for agent in agents[1:agent.id-1]])
         end
     
         Threads.@threads for agent in agents
@@ -70,7 +70,7 @@ function step_agents!(agents::Array{AgentState, 1},
         end
     
         for agent in agents
-            agent_step!(agent, world, [agent.position for agent in agents[1:agent.id]])
+            agent_step!(agent, world, [agent.position for agent in agents[1:agent.id-1]])
         end
     
         for agent in agents

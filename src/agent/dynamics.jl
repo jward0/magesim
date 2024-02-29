@@ -43,10 +43,14 @@ function calculate_next_position(agent::AgentState, target::Int64, world::WorldS
 
     step = operate_pos(diff, step_size/pos_norm(diff), *)
 
+    if pos_norm(diff) == 0
+        step = Position(0, 0)
+    end
+
     new_pos = operate_pos(agent.position, step, +)
 
     # Check if it would be colliding with any block points (usually used to handle agent collision)
-    if new_pos in blocked_pos
+    if new_pos in blocked_pos   
         return agent.position, agent.graph_position, false
     end
 
@@ -55,6 +59,9 @@ function calculate_next_position(agent::AgentState, target::Int64, world::WorldS
     if pos_norm(diff) == step_size
         # Stepping along edge, arrived at a (potentially intermediate) target
         new_graph_pos = t.id
+        if t.id <= world.n_nodes
+            agent.values.last_visited = t.id
+        end
         if t.id == target 
             at_target = true
         end       
