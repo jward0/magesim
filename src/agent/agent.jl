@@ -252,8 +252,9 @@ function do_psm(agent, self_priorities, adj)
     next_contribution = sum(next_contribution, dims=1)
     convolved_next = leakyrelu(next_contribution' + unweighted_adj*next_contribution', 0.3)
 
-    # hardcoded k=2
+    # hardcoded k=3
 
+    convolved_next = leakyrelu(convolved_next + unweighted_adj*convolved_next, 0.3)
     convolved_next = leakyrelu(convolved_next + unweighted_adj*convolved_next, 0.3)
 
     return leakyrelu(self_contribution - convolved_next, 0.3)

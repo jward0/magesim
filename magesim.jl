@@ -13,7 +13,7 @@ function main(args)
         throw(ArgumentError("Invalid number of arguments: $(length(args)). Please supply config name as only argument."))
     end
 
-    headless, world_fpath, obstacle_map, scale_factor, n_agents, agent_starts, speedup, timeout, multithreaded, custom_config = load_config(args[1])
+    headless, world_fpath, obstacle_map, scale_factor, n_agents, agent_starts, speedup, timeout, multithreaded, do_log, custom_config = load_config(args[1])
 
     if !headless
         builder = create_window()
@@ -24,8 +24,10 @@ function main(args)
     ts = 1/speedup
     actual_speedup = speedup
     gtk_running = true
-    logger = Logger()
-    log_frequency = 1
+    if do_log
+        logger = Logger()
+        log_frequency = 1
+    end
 
     for step in 1:timeout
         t = @elapsed begin
@@ -37,7 +39,7 @@ function main(args)
                 gtk_running = update_window!(world, agents, actual_speedup, builder)
             end
 
-            if step % log_frequency == 0
+            if do_log && step % log_frequency == 0 
                 log(world, logger, step)
                 log(agents, logger, step)
             end
