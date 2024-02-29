@@ -17,6 +17,7 @@ function main(args)
 
     if !headless
         builder = create_window()
+        speedup = min(speedup, 10.0)
     end
 
     world = create_world(world_fpath, obstacle_map, scale_factor)

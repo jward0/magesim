@@ -116,11 +116,19 @@ function make_decisions!(agent::AgentState)
 
         model_in = [node_values, adjacency_matrix]
 
+        """
         model_out = custom_regularise(10.0, vec(forward_nn(model_in)))
 
         # Comm layer
         final_priorities = softmax(custom_regularise(10.0, dropdims(do_psm(agent, model_out, adjacency_matrix), dims=2)), dims=1)
         enqueue!(agent.outbox, PriorityMessage(agent, nothing, final_priorities))
+        """
+
+        model_out = softmax(vec(forward_nn(model_in)), dims=1)
+
+        enqueue!(agent.outbox, PriorityMessage(agent, nothing, model_out))
+
+        final_priorities = do_priority_greedy(agent, model_out)
 
         # Prevents sitting still at node
         if agent.values.last_visited != 0
@@ -258,6 +266,20 @@ function do_psm(agent, self_priorities, adj)
     convolved_next = leakyrelu(convolved_next + unweighted_adj*convolved_next, 0.3)
 
     return leakyrelu(self_contribution - convolved_next, 0.3)
+end
+
+function do_priority_greedy(agent::AgentState, self_priorities::Array{Float64, 1})
+
+    # Note that this can only work for homogeneous agent policies
+    # No guarantee of performance of behaviour otherwise
+
+    flags::Array{Float64, 1} = ones(size(self_priorities))
+
+    for i in 1:size(agent.values.priority_log)[1]
+        flags .*= (self_priorities .> agent.values.priority_log[i, :])
+    end
+
+    return self_priorities .* flags
 end
 
 function custom_regularise(factor::Float64, data::Array{Float64, 1})
