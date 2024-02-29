@@ -125,14 +125,21 @@ function make_decisions!(agent::AgentState)
         """
 
         model_out = softmax(vec(forward_nn(model_in)), dims=1)
+        # model_out = vec(forward_nn(model_in))
 
         enqueue!(agent.outbox, PriorityMessage(agent, nothing, model_out))
 
         final_priorities = do_priority_greedy(agent, model_out)
 
+        # println(final_priorities)
+
         # Prevents sitting still at node
         if agent.values.last_visited != 0
             final_priorities[agent.values.last_visited] = 0.0
+        end
+
+        if agent.graph_position isa Int && agent.graph_position <= agent.world_state_belief.n_nodes
+            final_priorities[agent.graph_position] = 0.0
         end
 
         target = argmax(final_priorities)
@@ -277,6 +284,10 @@ function do_priority_greedy(agent::AgentState, self_priorities::Array{Float64, 1
 
     for i in 1:size(agent.values.priority_log)[1]
         flags .*= (self_priorities .> agent.values.priority_log[i, :])
+    end
+
+    if max(flags...) == 0.0
+        return self_priorities
     end
 
     return self_priorities .* flags
