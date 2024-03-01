@@ -17,21 +17,6 @@ struct Position
     y::Float64
 end
 
-struct Logger
-    log_directory::String
-
-    function Logger()
-
-        log_directory = string("logs/", Dates.format(now(), "yyyymmdd_HH:MM:SS/"))
-
-        if !isdir(log_directory)
-            Base.Filesystem.mkpath(log_directory)
-        end
-
-        new(log_directory)
-    end
-end
-
 struct UserConfig
     field::Nothing
 
@@ -40,7 +25,10 @@ struct UserConfig
     end
 end
 
-struct Config
+mutable struct Config
+    # This is mutable to allow for easy parameter sweeping
+    # (Each sweep just re-runs with modified config)
+
     # World configs
     world_fpath::String
     obstacle_map::Union{Nothing, Array{}}
@@ -60,6 +48,31 @@ struct Config
     custom_config::UserConfig
 end
 
+struct Logger
+    log_directory::String
+
+    function Logger(config::Config)
+
+        log_directory = string("logs/", Dates.format(now(), "yyyymmdd_HH:MM:SS/"))
+
+        if !isdir(log_directory)
+            Base.Filesystem.mkpath(log_directory)
+        end
+
+        fpath = string(log_directory, "config.txt") 
+        open(fpath, "a") do f
+            println(f, "world: $(config.world_fpath)")
+            println(f, "n_agents: $(config.n_agents)")
+            println(f, "agent_starts: $(config.agent_starts)")
+            println(f, "comm_range: $(config.comm_range)")
+            println(f, "check_los: $(config.check_los)")
+            println(f, "timeout: $(config.timeout)")
+            println(f, "custom_config: $(config.custom_config)")
+        end
+
+        new(log_directory)
+    end
+end
 
 # --- Agent action types ---
 
