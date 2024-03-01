@@ -1,5 +1,7 @@
 module ConfigLoader
 
+import ..Types: Config, UserConfig
+
 using JSON, Images
 
 """
@@ -28,11 +30,31 @@ function load_config(arg::String)
     timeout::Int64 = config["timeout"]
     multithreaded::Bool = config["multithreaded"]
     do_log::Bool = config["do_log"]
+    comm_range::Float64 = config["comm_range"]
+    check_los::Bool = config["check_los"]
 
     # Custom config loading
-    custom_config::Bool = config["custom_config"]
+    custom_config::UserConfig = UserConfig(config["custom_config"])
 
-    return headless, world_fpath, obstacle_map, scale_factor, n_agents, agent_starts, speedup, timeout, multithreaded, do_log, custom_config
+    config = Config(
+        world_fpath, 
+        obstacle_map,
+        scale_factor,
+        n_agents,
+        agent_starts,
+        comm_range,
+        check_los,
+        headless,
+        speedup,
+        timeout,
+        multithreaded,
+        do_log,
+        custom_config
+    )
+
+    return config
+
+    # return headless, world_fpath, obstacle_map, scale_factor, n_agents, agent_starts, speedup, timeout, multithreaded, do_log, custom_config
 end
 
 end

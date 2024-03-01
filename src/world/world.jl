@@ -1,6 +1,6 @@
 module World
 
-import ..Types: WorldState, AgentState, Node, DummyNode, AbstractNode
+import ..Types: WorldState, AgentState, Node, DummyNode, AbstractNode, Config
 import ..Utils: pos_distance, get_real_adj
 using Graphs, SimpleWeightedGraphs
 using JSON
@@ -10,7 +10,12 @@ using JSON
 
 Load world info from JSON file, construct node and map representations, and return world state
 """
-function create_world(fpath::String, obstacle_map::Union{Nothing, Array{}}, scale_factor::Float64)
+function create_world(config::Config)
+    
+    fpath = config.world_fpath
+    obstacle_map = config.obstacle_map
+    scale_factor = config.scale_factor
+
     nodes_dict = JSON.parsefile(fpath)
     nodes = Array{AbstractNode, 1}(undef, length(nodes_dict))
 
