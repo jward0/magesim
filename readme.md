@@ -1,8 +1,11 @@
 ## Update Log
 ### v1.1
 Added better config handling, including the ability to perform parameter sweeps via config
+
 Added inter-agent collision, logging, WaitAction, util tools relating to graph neighbour checking
+
 Speedup behaviour during non-headless operation improved
+
 All known bugs removed
 
 ## MAGESim
