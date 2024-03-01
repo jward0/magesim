@@ -1,7 +1,7 @@
 module Utils
 
 import ..Types: WorldState, AgentState, Node, Position
-using Graphs
+using Graphs, SimpleWeightedGraphs, LinearAlgebra
 
 function pos_distance(p1::Position, p2::Position)
     return ((p1.x - p2.x)^2 + (p1.y - p2.y)^2)^0.5
@@ -19,7 +19,23 @@ function operate_pos(p::Position, n::Number, f)
     return Position(f(p.x, n), f(p.y, n))
 end
 
+function get_distances(agent_graph_pos::Int64, agent_pos::Position, world::WorldState)
+    return [world.paths.dists[agent_graph_pos, node.id] for node in world.nodes[1:world.n_nodes]]
+end
+
+function get_distances(agent_graph_pos::AbstractEdge, agent_pos::Position, world::WorldState)
+
+    s = src(agent_graph_pos)
+    d = dst(agent_graph_pos)
+
+    return min.(get_distances(s, agent_pos, world) .+ pos_distance(agent_pos, world.nodes[s].position), 
+                get_distances(d, agent_pos, world) .+ pos_distance(agent_pos, world.nodes[d].position))
+end
+
 function get_neighbours(agent_pos::Union{AbstractEdge, Int64}, world::WorldState, no_dummy_nodes::Bool)
+    """
+    Returns array of node ids (integers)
+    """
     if agent_pos isa Int64
         neighbours = copy(neighbors(world.map, agent_pos))
     elseif has_edge(world.map, dst(agent_pos), src(agent_pos))

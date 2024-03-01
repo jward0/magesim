@@ -17,15 +17,57 @@ struct Position
     y::Float64
 end
 
+struct UserConfig
+    field::Nothing
+
+    function UserConfig(args...)
+        new(nothing)
+    end
+end
+
+mutable struct Config
+    # This is mutable to allow for easy parameter sweeping
+    # (Each sweep just re-runs with modified config)
+
+    # World configs
+    world_fpath::String
+    obstacle_map::Union{Nothing, Array{}}
+    scale_factor::Float64
+    # Agent configs
+    n_agents::Int64
+    agent_starts::Array{Int64, 1}
+    comm_range::Float64
+    check_los::Bool
+    # Run configs
+    headless::Bool
+    speedup::Float64
+    timeout::Int64
+    multithreaded::Bool
+    do_log::Bool
+    # User-defined config
+    custom_config::UserConfig
+end
+
 struct Logger
     log_directory::String
 
-    function Logger()
+    function Logger(config::Config)
 
         log_directory = string("logs/", Dates.format(now(), "yyyymmdd_HH:MM:SS/"))
 
         if !isdir(log_directory)
             Base.Filesystem.mkpath(log_directory)
+        end
+
+        fpath = string(log_directory, "config.txt") 
+        open(fpath, "a") do f
+            println(f, "world: $(config.world_fpath)")
+            println(f, "n_agents: $(config.n_agents)")
+            println(f, "agent_starts: $(config.agent_starts)")
+            println(f, "comm_range: $(config.comm_range)")
+            println(f, "check_los: $(config.check_los)")
+            println(f, "timeout: $(config.timeout)")
+            println(f, "custom_config: $(config.custom_config)")
         end
 
         new(log_directory)
@@ -116,7 +158,8 @@ struct WorldState
     map::AbstractGraph
     obstacle_map::Union{Nothing, Array{}}
     scale_factor::Float64
-    paths::Graphs.AbstractPathState  # Has fields dists, parents (for back-to-front navigation)
+    adj::Matrix{Float64} # Adjacency matrix of only real nodes
+    paths::Graphs.FloydWarshallState  # Has fields dists, parents (for back-to-front navigation)
     time::Real
     done::Bool
     
@@ -125,15 +168,24 @@ struct WorldState
                         map::AbstractGraph,
                         obstacle_map::Union{Nothing, Array{}},
                         scale_factor::Float64,
-                        paths::Union{Graphs.AbstractPathState, Nothing}=nothing, 
+                        adj::Union{Matrix{Float64}, Nothing}=nothing,
+                        paths::Union{Graphs.AbstractPathState, Nothing}=nothing,
                         time::Float64=0.0, 
                         done::Bool=false)
 
+        # TODO: sort all this out properly
+
+        if adj === nothing
+            new_adj = Matrix(zeros(Float64, (n_nodes, n_nodes)))
+        else
+            new_adj = adj
+        end
+
         if paths === nothing
             generated_paths = floyd_warshall_shortest_paths(map)
-            new(nodes, n_nodes, map, obstacle_map, scale_factor, generated_paths, time, done)
+            new(nodes, n_nodes, map, obstacle_map, scale_factor, new_adj, generated_paths, time, done)
         else
-            new(nodes, n_nodes, map, obstacle_map, scale_factor, paths, time, done)
+            new(nodes, n_nodes, map, obstacle_map, scale_factor, new_adj, paths, time, done)
         end
     end
 end
@@ -141,7 +193,11 @@ end
 # --- Agent types ---
 
 struct AgentValues
-    example_value::Nothing
+    field::Nothing
+
+    function AgentValues(args...)
+        new(nothing)
+    end
 end
 
 mutable struct AgentState
@@ -152,14 +208,16 @@ mutable struct AgentState
     graph_position::Union{AbstractEdge, Int64}
     step_size::Float64
     comm_range::Float64
+    check_los_flag::Bool
     sight_range::Float64
     inbox::Queue{AbstractMessage}
     outbox::Queue{AbstractMessage}
     world_state_belief::Union{WorldState, Nothing}
 
-    function AgentState(id::Int64, start_node_idx::Int64, start_node_pos::Position, values::Nothing)
+    function AgentState(id::Int64, start_node_idx::Int64, start_node_pos::Position, n_agents::Int64, n_nodes::Int64, comm_range::Float64, check_los::Bool, custom_config::UserConfig)
 
-        new(id, start_node_pos, AgentValues(values), Queue{AbstractAction}(), start_node_idx, 1.0, ∞, 10.0, Queue{AbstractMessage}(), Queue{AbstractMessage}(), nothing)    
+        values = AgentValues(n_agents, n_nodes, custom_config)
+        new(id, start_node_pos, values, Queue{AbstractAction}(), start_node_idx, 1.0, comm_range, check_los, 10.0, Queue{AbstractMessage}(), Queue{AbstractMessage}(), nothing)    
     end
 end
 

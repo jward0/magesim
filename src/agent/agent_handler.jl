@@ -1,6 +1,6 @@
 module AgentHandler
 
-import ..Types: AgentState, WorldState, Position, StepTowardsAction
+import ..Types: AgentState, WorldState, Position, StepTowardsAction, Config
 import ..Agent: agent_step!, make_decisions!, observe_world!
 import ..MessagePasser: pass_messages!
 
@@ -11,12 +11,24 @@ using DataStructures
 
 Create agents at specified nodes in the world and return them in an array
 """
-function spawn_agents(agent_count::Int64, start_nodes::Array{Int64, 1}, world::WorldState)
+function spawn_agents(world::WorldState, config::Config)
 
+    agent_count = config.n_agents
+    start_nodes = config.agent_starts
+    
     agents = Array{AgentState, 1}(undef, agent_count)
 
     for i = 1:agent_count
-        agents[i] = AgentState(i, start_nodes[i], world.nodes[i].position, nothing)
+        agents[i] = AgentState(
+            i, 
+            start_nodes[i], 
+            world.nodes[start_nodes[i]].position, 
+            agent_count, 
+            world.n_nodes, 
+            config.comm_range,
+            config.check_los, 
+            config.custom_config)
+        observe_world!(agents[i], world)
     end
 
     return agents
@@ -49,9 +61,6 @@ function step_agents!(agents::Array{AgentState, 1},
             end
         end
     
-        # This step has to happen sequentially for collision avoidance purposes (but is also quite fast so w/e)
-        # I suppose technically it could be broken out into 2 parts to keep it multithreaded, but would need
-        # synchronisation halfway through so might not be worth it for the time saved
         for agent in agents
             agent_step!(agent, world, [agent.position for agent in agents[1:agent.id-1]])
         end
@@ -110,8 +119,8 @@ function step_agents_(agents::Array{AgentState, 1},
             end
         end
     
-        Threads.@threads for agent in agents
-            agent_step!(agent, world)
+        for agent in agents
+            agent_step!(agent, world, [agent.position for agent in agents[1:agent.id-1]])
         end
     
         Threads.@threads for agent in agents
@@ -130,7 +139,7 @@ function step_agents_(agents::Array{AgentState, 1},
         end
     
         for agent in agents
-            agent_step!(agent, world)
+            agent_step!(agent, world, [agent.position for agent in agents[1:agent.id-1]])
         end
     
         for agent in agents
@@ -139,6 +148,7 @@ function step_agents_(agents::Array{AgentState, 1},
     end
 
     pass_messages!(agents, world)
+
 
 end
 
