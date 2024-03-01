@@ -1,12 +1,12 @@
 {
 	"world": "example",
-	"headless": false,
+	"headless": true,
 	"n_agents": 4,
-	"agent_starts": [6, 11, 16, 21],
+	"agent_starts": [1, 6, 11, 16],
 	"speedup": 10000,
 	"timeout": 10000,
 	"multithreaded": true,
-	"do_log": false,
+	"do_log": true,
 	"comm_range": 9999,
 	"check_los": false,
 	"custom_config": false

@@ -1,0 +1,4 @@
+{
+	"comm_range": [5, 10],
+    "check_los": [true, false]
+}
