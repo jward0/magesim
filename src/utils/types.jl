@@ -32,6 +32,35 @@ struct Logger
     end
 end
 
+struct UserConfig
+    field::Nothing
+
+    function UserConfig(args...)
+        new(nothing)
+    end
+end
+
+struct Config
+    # World configs
+    world_fpath::String
+    obstacle_map::Union{Nothing, Array{}}
+    scale_factor::Float64
+    # Agent configs
+    n_agents::Int64
+    agent_starts::Array{Int64, 1}
+    comm_range::Float64
+    check_los::Bool
+    # Run configs
+    headless::Bool
+    speedup::Float64
+    timeout::Int64
+    multithreaded::Bool
+    do_log::Bool
+    # User-defined config
+    custom_config::UserConfig
+end
+
+
 # --- Agent action types ---
 
 struct WaitAction <: AbstractAction
@@ -148,8 +177,13 @@ mutable struct AgentValues
     sebs_gains::Tuple{Float64, Float64}
     n_agents_belief::Int64
 
-    function AgentValues(g1::Float64, g2::Float64, n_agents::Int64, n_nodes::Int64)
-        new(zeros(Int64, n_agents), zeros(Float64, n_nodes), (g1, g2), n_agents)
+    function AgentValues(n_agents::Int64, n_nodes::Int64, custom_config::UserConfig)
+        new(zeros(Float64, (n_agents, n_nodes)), 
+            zeros(Float64, n_nodes), 
+            zeros(Float64, n_nodes),
+            zeros(Float64, n_agents),
+            n_agents,
+            0)
     end
 end
 
@@ -161,15 +195,16 @@ mutable struct AgentState
     graph_position::Union{AbstractEdge, Int64}
     step_size::Float64
     comm_range::Float64
+    check_los_flag::Bool
     sight_range::Float64
     inbox::Queue{AbstractMessage}
     outbox::Queue{AbstractMessage}
     world_state_belief::Union{WorldState, Nothing}
 
-    function AgentState(id::Int64, start_node_idx::Int64, start_node_pos::Position, n_agents::Int64, n_nodes::Int64, custom_config::Array{Float64, 1})
+    function AgentState(id::Int64, start_node_idx::Int64, start_node_pos::Position, n_agents::Int64, n_nodes::Int64, comm_range::Float64, check_los::Bool, custom_config::UserConfig)
 
-        values = AgentValues(custom_config[1], custom_config[2], n_agents, n_nodes)
-        new(id, start_node_pos, values, Queue{AbstractAction}(), start_node_idx, 1.0, ∞, 10.0, Queue{AbstractMessage}(), Queue{AbstractMessage}(), nothing)    
+        values = AgentValues(n_agents, n_nodes, custom_config)
+        new(id, start_node_pos, values, Queue{AbstractAction}(), start_node_idx, 1.0, comm_range, check_los, 10.0, Queue{AbstractMessage}(), Queue{AbstractMessage}(), nothing)    
     end
 end
 

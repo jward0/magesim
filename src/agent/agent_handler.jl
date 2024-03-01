@@ -1,6 +1,6 @@
 module AgentHandler
 
-import ..Types: AgentState, WorldState, Position, StepTowardsAction
+import ..Types: AgentState, WorldState, Position, StepTowardsAction, Config
 import ..Agent: agent_step!, make_decisions!, observe_world!
 import ..MessagePasser: pass_messages!
 
@@ -11,12 +11,23 @@ using DataStructures
 
 Create agents at specified nodes in the world and return them in an array
 """
-function spawn_agents(custom_config::Array{Float64, 1}, agent_count::Int64, start_nodes::Array{Int64, 1}, world::WorldState)
+function spawn_agents(world::WorldState, config::Config)
 
+    agent_count = config.n_agents
+    start_nodes = config.agent_starts
+    
     agents = Array{AgentState, 1}(undef, agent_count)
 
     for i = 1:agent_count
-        agents[i] = AgentState(i, start_nodes[i], world.nodes[start_nodes[i]].position, agent_count, world.n_nodes, custom_config)
+        agents[i] = AgentState(
+            i, 
+            start_nodes[i], 
+            world.nodes[start_nodes[i]].position, 
+            agent_count, 
+            world.n_nodes, 
+            config.comm_range,
+            config.check_los, 
+            config.custom_config)
         observe_world!(agents[i], world)
     end
 
@@ -111,8 +122,8 @@ function step_agents_(agents::Array{AgentState, 1},
             end
         end
     
-        Threads.@threads for agent in agents
-            agent_step!(agent, world)
+        for agent in agents
+            agent_step!(agent, world, [agent.position for agent in agents[1:agent.id-1]])
         end
     
         Threads.@threads for agent in agents
@@ -131,7 +142,7 @@ function step_agents_(agents::Array{AgentState, 1},
         end
     
         for agent in agents
-            agent_step!(agent, world)
+            agent_step!(agent, world, [agent.position for agent in agents[1:agent.id-1]])
         end
     
         for agent in agents
@@ -140,6 +151,7 @@ function step_agents_(agents::Array{AgentState, 1},
     end
 
     pass_messages!(agents, world)
+
 
 end
 
