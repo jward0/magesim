@@ -1,7 +1,12 @@
-TODO: write ctf_example branch
+## Update Log
+### v1.1
+Added better config handling, including the ability to perform parameter sweeps via config
+Added inter-agent collision, logging, WaitAction, util tools relating to graph neighbour checking
+Speedup behaviour during non-headless operation improved
+All known bugs removed
 
 ## MAGESim
-MAGESim (Multi-Agent Graph Environment Simulator) is, as the name suggests, a multi-agent simulator for graph-structured environments. It is designed to be light-weight and performant, and easily customisable to specific use-cases. The modification guide below will help get you started with customising the simulator for your own purposes, and two example branches (patrolling_example and ctf_example) have been created to demonstrate how the simulator can be used for various purposes. A Python wrapper for the PettingZoo ParallelEnv API for multi-agent reinforcement learning is also provided (see ctf_example branch for an example).
+MAGESim (Multi-Agent Graph Environment Simulator) is, as the name suggests, a multi-agent simulator for graph-structured environments. It is designed to be light-weight and performant, and easily customisable to specific use-cases. The modification guide below will help get you started with customising the simulator for your own purposes, and two example branches (patrolling_example and ctf_example) have been created to demonstrate how the simulator can be used for various purposes. A Python wrapper for the PettingZoo ParallelEnv API for multi-agent reinforcement learning is also provided (but untested).
 
 ### Limitations
 MAGESim is a fully synchronous simulator. As such, the world and all agents update simultaneously every timestep, and no provision is made for behaviour that does not fit to this discretisation - for example, should an agent reach its target node with some movement remaining for the timestep, the remaining movement will be lost and the agent will not select a new action from its queue until the next timestep.
@@ -36,6 +41,13 @@ Maps are stored in the `maps` directory, and consist of a `.info` file defining 
 To aid the process of constructing map jsons, `tools/map_csv_to_json.jl` has been provided. Running this with arguments of map name, filepath to node positions csv, filepath to adjacency matrix csv (see `maps/sample_adj.csv` and `maps/sample_pos.csv` for formatting details) will generate a valid map json for the given graph. Note that dummy nodes and node values must still be added manually.
 
 Obstacle maps must be provided as a black-and-white `.pgm` file, where black represents impassable obstacles and white represents free space. Take care to ensure that the scale factor you provide has been correctly calculated as world position / image pixel coordinates.
+
+## Operation
+To run the simulator with a given config file, the command `julia magesim.jl $config_name` should be run, where `$config_name` points to a file in `configs/`, eg. to run the simulator with the config specified in `configs/default.json`, the command `julia magesim.jl default` should be used. 
+### Config 
+All of the fields specified in `configs/default.json` are mandatory for user-defined config files. `"world"` holds a name associated with a set of world definiton files (including .info, .json, and optionally.pgm). `"headless"` holds a boolean flag for headless operation (ie. no gui). `"n_agents"` and `"agent_starts"` hold the number and start nodes of agents. `"speedup"` holds the maximum speedup that the simulator will attempt (note that this caps to 10 for non-headless operation). `"timeout"` holds the number of timesteps that will be performed. `"multithreaded"` holds a boolean flag for multithreading agent decision making and actions. `"do_log"` holds a boolean flag for saving logs. `"comm_range"` sets the maximum range at which inter-agent message passing can occur. `"check_los"` holds a boolean flag for whether the obstacle layer optionally used by the world should block communication. `"custom_config"` should hold all user-defined config values.
+### Parameter sweeps via config
+To run multiple sequential runs with varying config parameters, an optional second argument naming a parameter sweep config file can be provided. This file (see `configs/default_sweep.json` for an example) should contain lists of different values to be tested, keyed in the same way as in the main config files. Every combination of the provided parameters will be tested, and any config parameters not listed in the sweep config file will take the value specified in the main config file.
 
 ## Interface with PettingZoo ParallelEnv API
 ### Limitations
