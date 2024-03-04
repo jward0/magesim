@@ -30,6 +30,9 @@ function load_configs(conf_arg::String, sweep_arg::String)
     for prod in product([sweep_config[k] for k in ks]...)
         for (k, v) in zip(ks, [p for p in prod])
             conf_dict[k] = v
+            if k == "n_agents"
+                conf_dict["agent_starts"] = [range(1, v)...]
+            end
         end
         push!(configs, process_config_dict(conf_dict))
     end
