@@ -18,10 +18,10 @@ struct Position
 end
 
 struct UserConfig
-    field::Nothing
+    values::Array{Float64, 1}
 
     function UserConfig(args...)
-        new(nothing)
+        new(args[1])
     end
 end
 
@@ -191,12 +191,10 @@ mutable struct AgentValues
     n_agents_belief::Int64
 
     function AgentValues(n_agents::Int64, n_nodes::Int64, custom_config::UserConfig)
-        new(zeros(Float64, (n_agents, n_nodes)), 
+        new(zeros(Int64, n_agents), 
             zeros(Float64, n_nodes), 
-            zeros(Float64, n_nodes),
-            zeros(Float64, n_agents),
-            n_agents,
-            0)
+            (custom_config.values[1], custom_config.values[2]),
+            n_agents)
     end
 end
 

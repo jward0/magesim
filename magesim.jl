@@ -68,6 +68,7 @@ function main(args)
         end
 
         stop_world()
+        sleep(1)
     end
 
     if !headless

@@ -1,7 +1,7 @@
 module World
 
 import ..Types: WorldState, AgentState, Node, DummyNode, AbstractNode, Config
-import ..Utils: pos_distance, get_real_adj
+import ..Utils: pos_distance
 using Graphs, SimpleWeightedGraphs
 using JSON
 
