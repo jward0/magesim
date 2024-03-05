@@ -38,6 +38,7 @@ mutable struct Config
     agent_starts::Array{Int64, 1}
     comm_range::Float64
     check_los::Bool
+    agent_speed::Float64
     # Run configs
     headless::Bool
     speedup::Float64
@@ -109,10 +110,11 @@ Base.@kwdef struct NodeValues
 
     If you do not wish to use the PettingZoo wrapper, you may disregard the above comments.
     """
-    value_string::String = "10"
-    value_arr::Array{Int64} = [1, 2, 3]
-    value_float::Float64 = 0.1
+    is_reward::Array{Bool, 1} = [true, true, true, true]
 
+    function NodeValues(is_reward::Array{Bool, 1})
+        new(is_reward)
+    end   
 end
 
 struct DummyNode <: AbstractNode
@@ -148,6 +150,10 @@ struct Node <: AbstractNode
         values = NodeValues()
 
         new(id, label, position, neighbours, values)
+    end
+
+    function Node(original::Node, updated_values::NodeValues)
+        new(original.id, original.label, original.position, original.neighbours, updated_values)
     end
 end
 
@@ -219,10 +225,10 @@ mutable struct AgentState
     outbox::Queue{AbstractMessage}
     world_state_belief::Union{WorldState, Nothing}
 
-    function AgentState(id::Int64, start_node_idx::Int64, start_node_pos::Position, n_agents::Int64, n_nodes::Int64, comm_range::Float64, check_los::Bool, custom_config::UserConfig)
+    function AgentState(id::Int64, start_node_idx::Int64, start_node_pos::Position, n_agents::Int64, n_nodes::Int64, comm_range::Float64, check_los::Bool, speed::Float64, custom_config::UserConfig)
 
         values = AgentValues(id, custom_config)
-        new(id, start_node_pos, values, Queue{AbstractAction}(), start_node_idx, 1.0, comm_range, check_los, 10.0, Queue{AbstractMessage}(), Queue{AbstractMessage}(), nothing)    
+        new(id, start_node_pos, values, Queue{AbstractAction}(), start_node_idx, speed, comm_range, check_los, 10.0, Queue{AbstractMessage}(), Queue{AbstractMessage}(), nothing)    
     end
 end
 

@@ -1,13 +1,14 @@
 {
-	"world": "example",
-	"headless": true,
+	"world": "office",
+	"headless": false,
 	"n_agents": 4,
 	"agent_starts": [1, 6, 11, 16],
 	"speedup": 10000,
 	"timeout": 10000,
 	"multithreaded": true,
-	"do_log": true,
+	"do_log": false,
 	"comm_range": 9999,
 	"check_los": false,
+	"agent_speed": 1.0,
 	"custom_config": [0.1, 0.1, 0.1, 0.1]
 }

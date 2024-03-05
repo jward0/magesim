@@ -66,6 +66,8 @@ function world_step(world_state::WorldState, agents::Array{AgentState, 1})
     updated_world_state = WorldState(world_state.nodes, world_state.n_nodes, world_state.map, world_state.obstacle_map, world_state.scale_factor, world_state.adj, world_state.paths, world_state.time + 1, world_state.done)    
     rewards = zeros(Float64, length(agents))
 
+    # new_nodes::Array{Node, 1} = [Node(n, updated_values[i]) for (i, n) in enumerate(world_state.nodes)]
+
     return true, updated_world_state, rewards
 end
 

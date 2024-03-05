@@ -75,6 +75,7 @@ function process_config_dict(config_dict::Dict{String, Any})
     do_log::Bool = config_dict["do_log"]
     comm_range::Float64 = config_dict["comm_range"]
     check_los::Bool = config_dict["check_los"]
+    agent_speed::Float64 = config_dict["agent_speed"]
 
     # Custom config loading
     custom_config::UserConfig = UserConfig(config_dict["custom_config"])
@@ -87,6 +88,7 @@ function process_config_dict(config_dict::Dict{String, Any})
         agent_starts,
         comm_range,
         check_los,
+        agent_speed,
         headless,
         speedup,
         timeout,
