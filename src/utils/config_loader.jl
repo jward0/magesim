@@ -2,7 +2,7 @@ module ConfigLoader
 
 import ..Types: Config, UserConfig
 
-using JSON, Images, IterTools
+using JSON, Images, IterTools, Combinatorics
 
 """
     load_config(args::Vector{String})
@@ -27,11 +27,28 @@ function load_configs(conf_arg::String, sweep_arg::String)
 
     ks = [k for k in keys(sweep_config)]
 
-    for prod in product([sweep_config[k] for k in ks]...)
-        for (k, v) in zip(ks, [p for p in prod])
-            conf_dict[k] = v
+    if "custom_config" in ks
+
+        li_range = sweep_config["custom_config"]
+        n_agents = conf_dict["n_agents"]
+
+        p = collect(product([li_range for _ in [1:n_agents]...]...))
+        all_combinations = map(collect, reshape(p, size(li_range)[1]^n_agents))
+        unique_combinations = collect(Set(map(sort, all_combinations)))
+
+        for c in unique_combinations
+            conf_dict["custom_config"] = c
+            push!(configs, process_config_dict(conf_dict))
         end
-        push!(configs, process_config_dict(conf_dict))
+    else
+        for prod in product([sweep_config[k] for k in ks]...)
+            for (k, v) in zip(ks, [p for p in prod])
+                if k != "custom_config"
+                    conf_dict[k] = v
+                end
+            end
+            push!(configs, process_config_dict(conf_dict))
+        end
     end
 
     return configs

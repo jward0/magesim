@@ -18,10 +18,10 @@ struct Position
 end
 
 struct UserConfig
-    field::Nothing
+    lis::Array{Float64, 1}
 
     function UserConfig(args...)
-        new(nothing)
+        new(args[1])
     end
 end
 
@@ -193,10 +193,10 @@ end
 # --- Agent types ---
 
 struct AgentValues
-    field::Nothing
+    li:Float64
 
-    function AgentValues(args...)
-        new(nothing)
+    function AgentValues(id, custom_config)
+        new(custom_config[id])
     end
 end
 
@@ -216,7 +216,7 @@ mutable struct AgentState
 
     function AgentState(id::Int64, start_node_idx::Int64, start_node_pos::Position, n_agents::Int64, n_nodes::Int64, comm_range::Float64, check_los::Bool, custom_config::UserConfig)
 
-        values = AgentValues(n_agents, n_nodes, custom_config)
+        values = AgentValues(id, custom_config)
         new(id, start_node_pos, values, Queue{AbstractAction}(), start_node_idx, 1.0, comm_range, check_los, 10.0, Queue{AbstractMessage}(), Queue{AbstractMessage}(), nothing)    
     end
 end
