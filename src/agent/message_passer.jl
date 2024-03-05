@@ -16,7 +16,7 @@ function pass_messages!(agents::Array{AgentState, 1}, world::WorldState)
     for agent in agents
         while !isempty(agent.outbox)
             message = dequeue!(agent.outbox)
-            targets::Array{Int64, 1} = isnothing(message.targets) ? collect(1:length(agents)) : message.targets
+            targets::Array{Int64, 1} = isnothing(message.targets) ? [x for x in collect(1:length(agents)) if x != agent.id] : message.targets
             for id in targets
                 if agent.check_los_flag
                     if check_los(world.obstacle_map, 
