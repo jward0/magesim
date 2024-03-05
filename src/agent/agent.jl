@@ -122,12 +122,17 @@ function make_decisions!(agent::AgentState)
         enqueue!(agent.outbox, PriorityMessage(agent, nothing, final_priorities))
         """
 
-        model_out = softmax(vec(forward_nn(model_in)), dims=1)
-        # model_out = vec(forward_nn(model_in))
+        # model_out = softmax(vec(forward_nn(model_in)), dims=1)
+        model_out = vec(forward_nn(model_in))
 
         enqueue!(agent.outbox, PriorityMessage(agent, nothing, model_out))
 
+        # println("))))))))))))))))))))))))))))))))))))))))))))))")
+        # println(model_out)
+        # println(argmax(model_out))
         final_priorities = do_priority_greedy(agent, model_out)
+        # println(final_priorities)
+        # println(argmax(final_priorities))
 
         # Prevents sitting still at node
         if agent.values.last_visited != 0
@@ -279,7 +284,9 @@ function do_priority_greedy(agent::AgentState, self_priorities::Array{Float64, 1
     flags::Array{Float64, 1} = ones(size(self_priorities))
 
     for i in 1:size(agent.values.priority_log)[1]
-        flags .*= (self_priorities .> agent.values.priority_log[i, :])
+        if i != agent.id
+            flags .*= (self_priorities .> agent.values.priority_log[i, :])
+        end
     end
 
     if max(flags...) == 0.0
