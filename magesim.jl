@@ -30,41 +30,45 @@ function main(args)
             speedup = cf.speedup
         end
 
-        world = create_world(cf)
-        agents = spawn_agents(world, cf)
-        ts = 1/speedup
-        actual_speedup = speedup
-        gtk_running = true
-        if cf.do_log
-            logger = Logger(cf)
-            log_frequency = 1
-        end
+        for run_n in 1:10
 
-        for step in 1:cf.timeout
-            t = @elapsed begin
+            world = create_world(cf)
+            agents = spawn_agents(world, cf)
+            ts = 1/speedup
+            actual_speedup = speedup
+            gtk_running = true
+            if cf.do_log
+                logger = Logger(cf, run_n)
+                log_frequency = 1
+            end
 
-                step_agents!(agents, world, cf.multithreaded)
-                world_running, world, _ = world_step(world, agents)
-                
-                if !headless
-                    gtk_running = update_window!(world, agents, actual_speedup, builder)
+            for step in 1:cf.timeout
+                t = @elapsed begin
+
+                    step_agents!(agents, world, cf.multithreaded)
+                    world_running, world, _ = world_step(world, agents)
+                    
+                    if !headless
+                        gtk_running = update_window!(world, agents, actual_speedup, builder)
+                    end
+
+                    if cf.do_log && step % log_frequency == 0 
+                        for agent in agents
+                            log(agent, logger, step)
+                        end
+                    end
                 end
 
-                if cf.do_log && step % log_frequency == 0 
-                    log(world, logger, step)
-                    log(agents, logger, step)
+                if !headless && (world_running && gtk_running)
+                    sleep(max(ts-t, 0))
+                    actual_speedup = 1/max(t, ts)
+                elseif !world_running
+                    break
                 end
             end
 
-            if !headless && (world_running && gtk_running)
-                sleep(max(ts-t, 0))
-                actual_speedup = 1/max(t, ts)
-            elseif !world_running
-                break
-            end
+            stop_world()
         end
-
-        stop_world()
     end
 
     if !headless

@@ -10,23 +10,21 @@ using Dates
 Log AgentState data
 """
 function log(target::AgentState, logger::Logger, timestep::Int)
-    fpath = string(logger.log_directory, "agent_", string(target.id), ".csv") 
+    fpath = string(logger.log_directory, "$(target.id)/$(logger.run_n)_Rewards.csv") 
+
+    if !isdir(string(logger.log_directory, "$(target.id)/"))
+        Base.Filesystem.mkpath(string(logger.log_directory, "$(target.id)/"))
+    end
 
     if !isfile(fpath)
-        header = "timestep, x, y, graph location type, edge source/node, edge destination/node"
+        header = "reward, timestep"
         open(fpath, "w") do file
             write(file, header)
             write(file,"\n")
         end
     end
 
-    if target.graph_position isa Int64
-        graph_pos_str = string("node,", string(target.graph_position), ",", string(target.graph_position))
-    else
-        graph_pos_str = string("edge,", string(src(target.graph_position)), ",", string(dst(target.graph_position)))
-    end
-
-    csv_line = string(string(timestep), ",", string(target.position.x), ",", string(target.position.y), ",", graph_pos_str)
+    csv_line = "$(target.values.cumulative_reward), $(string(timestep))"
 
     open(fpath, "a") do file
         write(file, csv_line)

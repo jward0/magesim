@@ -50,27 +50,31 @@ end
 
 struct Logger
     log_directory::String
+    run_n::Int64
 
-    function Logger(config::Config)
+    function Logger(config::Config, run_n::Int64)
 
-        log_directory = string("logs/", Dates.format(now(), "yyyymmdd_HH:MM:SS/"))
+        # log_directory = string("logs/", Dates.format(now(), "yyyymmdd_HH:MM:SS/"))
+        log_directory = string("logs/", Dates.format(now(), "yyyymmdd_HH:MM:SS/"), config.custom_config.lis, "/")
 
         if !isdir(log_directory)
             Base.Filesystem.mkpath(log_directory)
         end
 
-        fpath = string(log_directory, "config.txt") 
-        open(fpath, "a") do f
-            println(f, "world: $(config.world_fpath)")
-            println(f, "n_agents: $(config.n_agents)")
-            println(f, "agent_starts: $(config.agent_starts)")
-            println(f, "comm_range: $(config.comm_range)")
-            println(f, "check_los: $(config.check_los)")
-            println(f, "timeout: $(config.timeout)")
-            println(f, "custom_config: $(config.custom_config)")
+        if run_n == 1
+            fpath = string(log_directory, "config.txt") 
+            open(fpath, "a") do f
+                println(f, "world: $(config.world_fpath)")
+                println(f, "n_agents: $(config.n_agents)")
+                println(f, "agent_starts: $(config.agent_starts)")
+                println(f, "comm_range: $(config.comm_range)")
+                println(f, "check_los: $(config.check_los)")
+                println(f, "timeout: $(config.timeout)")
+                println(f, "custom_config: $(config.custom_config)")
+            end
         end
 
-        new(log_directory)
+        new(log_directory, run_n)
     end
 end
 
@@ -192,11 +196,12 @@ end
 
 # --- Agent types ---
 
-struct AgentValues
-    li:Float64
+mutable struct AgentValues
+    li::Float64
+    cumulative_reward::Float64
 
     function AgentValues(id, custom_config)
-        new(custom_config[id])
+        new(custom_config.lis[id], 0.0)
     end
 end
 
