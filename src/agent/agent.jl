@@ -64,7 +64,8 @@ function observe_world!(agent::AgentState, world::WorldState)
         agent.values.idleness_log[agent.graph_position] = 0.0
     end
 
-
+    enqueue!(agent.outbox, PosMessage(agent, nothing, agent.position))
+    enqueue!(agent.outbox, IdlenessLogMessage(agent, nothing, agent.values.idleness_log))
 end
 
 """
@@ -109,7 +110,9 @@ function make_decisions!(agent::AgentState)
 
         # distances = [agent.world_state_belief.paths.dists[agent.graph_position, node.id] for node in agent.world_state_belief.nodes[1:agent.world_state_belief.n_nodes]]
         distances = get_distances(agent.graph_position, agent.position, agent.world_state_belief)
-        idlenesses = [node.values.idleness for node in agent.world_state_belief.nodes[1:agent.world_state_belief.n_nodes]]
+        # idlenesses = [node.values.idleness for node in agent.world_state_belief.nodes[1:agent.world_state_belief.n_nodes]]
+        idlenesses = agent.values.idleness_log
+
         node_values = hcat(idlenesses/(c*agent.world_state_belief.n_nodes), distances/c)
 
         model_in = [node_values, adjacency_matrix]
@@ -125,12 +128,15 @@ function make_decisions!(agent::AgentState)
         # model_out = softmax(vec(forward_nn(model_in)), dims=1)
         model_out = vec(forward_nn(model_in))
 
-        enqueue!(agent.outbox, PriorityMessage(agent, nothing, model_out))
+        # priorities = distance_filter(distances, model_out)
+        priorities = model_out
+
+        enqueue!(agent.outbox, PriorityMessage(agent, nothing, priorities))
 
         # println("))))))))))))))))))))))))))))))))))))))))))))))")
         # println(model_out)
         # println(argmax(model_out))
-        final_priorities = do_priority_greedy(agent, model_out)
+        final_priorities = do_priority_greedy(agent, priorities)
         # println(final_priorities)
         # println(argmax(final_priorities))
 
@@ -145,10 +151,17 @@ function make_decisions!(agent::AgentState)
 
         target = argmax(final_priorities)
 
-        enqueue!(agent.outbox, PosMessage(agent, nothing, agent.position))
-        enqueue!(agent.outbox, IdlenessLogMessage(agent, nothing, agent.values.idleness_log))
+        # enqueue!(agent.outbox, PosMessage(agent, nothing, agent.position))
+        # enqueue!(agent.outbox, IdlenessLogMessage(agent, nothing, agent.values.idleness_log))
         enqueue!(agent.action_queue, MoveToAction(target))
     end
+end
+
+function distance_filter(taps, values)
+
+    taps = 1 .- (taps.-minimum(taps))/maximum(taps)
+
+    return taps .* values
 end
 
 function forward_nn(input)
