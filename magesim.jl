@@ -43,32 +43,34 @@ function main(args)
             log_frequency = 1
         end
 
-        for step in 1:cf.timeout
-            t = @elapsed begin
+        full_t = @elapsed begin
 
-                step_agents!(agents, world, cf.multithreaded)
-                world_running, world, _ = world_step(world, agents)
-                
-                if !headless
-                    gtk_running = update_window!(world, agents, actual_speedup, builder)
+            for step in 1:cf.timeout
+                t = @elapsed begin
+
+                    step_agents!(agents, world, cf.multithreaded)
+                    world_running, world, _ = world_step(world, agents)
+                    
+                    if !headless
+                        gtk_running = update_window!(world, agents, actual_speedup, builder)
+                    end
+
+                    if cf.do_log && step % log_frequency == 0 
+                        log(world, logger, step)
+                        log(agents, logger, step)
+                    end
                 end
 
-                if cf.do_log && step % log_frequency == 0 
-                    log(world, logger, step)
-                    log(agents, logger, step)
+                if !headless && (world_running && gtk_running)
+                    sleep(max(ts-t, 0))
+                    actual_speedup = 1/max(t, ts)
+                elseif !world_running
+                    break
                 end
             end
-
-            if !headless && (world_running && gtk_running)
-                sleep(max(ts-t, 0))
-                actual_speedup = 1/max(t, ts)
-            elseif !world_running
-                break
-            end
+            stop_world()
         end
-
-        stop_world()
-        sleep(1)
+        sleep(max(1.1-full_t, 0))
     end
 
     if !headless
