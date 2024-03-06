@@ -67,6 +67,7 @@ function check_los(obstacle_map::Array,
         end
 
         current_position = [current_position[1] + m*pixel_distance[1], current_position[2]+m*pixel_distance[2]]
+        pixel_distance = (target_pixel[1] - current_pixel[1], target_pixel[2] - current_pixel[2])
 
     end
 
