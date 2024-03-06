@@ -1,12 +1,12 @@
 {
-	"world": "example",
-	"headless": true,
+	"world": "DIAG_floor1",
+	"headless": false,
 	"n_agents": 2,
 	"agent_starts": [1, 27],
 	"speedup": 10000,
-	"timeout": 30000,
+	"timeout": 15000,
 	"multithreaded": true,
-	"do_log": true,
+	"do_log": false,
 	"comm_range": 9999,
 	"check_los": true,
 	"custom_config": false
