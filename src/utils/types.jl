@@ -279,6 +279,17 @@ struct StringMessage <: AbstractMessage
     end
 end
 
+struct ArrivedAtNodeMessage <: AbstractMessage
+    source::Int64
+    targets::Union{Array{Int64, 1}, Nothing}
+    message::Int64
+
+    function ArrivedAtNodeMessage(agent::AgentState, targets::Union{Array{Int64, 1}, Nothing}, message::Int64)
+
+        new(agent.id, targets, message)
+    end
+end
+
 export WorldState
 export AgentState
 

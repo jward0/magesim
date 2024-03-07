@@ -1,6 +1,6 @@
 module Agent
 
-import ..Types: AgentState, WorldState, Position, AbstractAction, WaitAction, MoveToAction, StepTowardsAction, IdlenessLogMessage, PriorityMessage, PosMessage
+import ..Types: AgentState, WorldState, Position, AbstractAction, WaitAction, MoveToAction, StepTowardsAction, IdlenessLogMessage, PriorityMessage, PosMessage, ArrivedAtNodeMessage
 import ..AgentDynamics: calculate_next_position
 import ..Utils: get_neighbours, pos_distance, get_distances
 
@@ -62,10 +62,11 @@ function observe_world!(agent::AgentState, world::WorldState)
     agent.values.idleness_log = [i + 1.0 for i in agent.values.idleness_log]
     if agent.graph_position isa Int64 && agent.graph_position <= world.n_nodes
         agent.values.idleness_log[agent.graph_position] = 0.0
+        enqueue!(agent.outbox, ArrivedAtNodeMessage(agent, nothing, agent.graph_position))
     end
 
     enqueue!(agent.outbox, PosMessage(agent, nothing, agent.position))
-    enqueue!(agent.outbox, IdlenessLogMessage(agent, nothing, agent.values.idleness_log))
+    # enqueue!(agent.outbox, IdlenessLogMessage(agent, nothing, agent.values.idleness_log))
 end
 
 """
@@ -87,6 +88,9 @@ function make_decisions!(agent::AgentState)
         if message isa IdlenessLogMessage
             # Min pool observed idleness with idleness from message
             agent.values.idleness_log = min.(agent.values.idleness_log, message.message)
+            message_received = true
+        elseif message isa ArrivedAtNodeMessage
+            agent.values.idleness_log[message.message] = 0.0
             message_received = true
         elseif message isa PriorityMessage
             # Update priority log
@@ -117,28 +121,13 @@ function make_decisions!(agent::AgentState)
 
         model_in = [node_values, adjacency_matrix]
 
-        """
-        model_out = custom_regularise(10.0, vec(forward_nn(model_in)))
-
-        # Comm layer
-        final_priorities = softmax(custom_regularise(10.0, dropdims(do_psm(agent, model_out, adjacency_matrix), dims=2)), dims=1)
-        enqueue!(agent.outbox, PriorityMessage(agent, nothing, final_priorities))
-        """
-
-        # model_out = softmax(vec(forward_nn(model_in)), dims=1)
         model_out = vec(forward_nn(model_in))
 
-        # priorities = distance_filter(distances, model_out)
         priorities = model_out
 
         enqueue!(agent.outbox, PriorityMessage(agent, nothing, priorities))
 
-        # println("))))))))))))))))))))))))))))))))))))))))))))))")
-        # println(model_out)
-        # println(argmax(model_out))
         final_priorities = do_priority_greedy(agent, priorities)
-        # println(final_priorities)
-        # println(argmax(final_priorities))
 
         # Prevents sitting still at node
         if agent.values.last_visited != 0
@@ -151,8 +140,6 @@ function make_decisions!(agent::AgentState)
 
         target = argmax(final_priorities)
 
-        # enqueue!(agent.outbox, PosMessage(agent, nothing, agent.position))
-        # enqueue!(agent.outbox, IdlenessLogMessage(agent, nothing, agent.values.idleness_log))
         enqueue!(agent.action_queue, MoveToAction(target))
     end
 end

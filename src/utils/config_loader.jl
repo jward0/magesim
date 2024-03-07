@@ -32,16 +32,22 @@ function load_configs(conf_arg::String, sweep_arg::String)
             conf_dict[k] = v
             if k == "n_agents"
                 if v == 1
+                    # conf_dict["agent_starts"] = [31]
                     conf_dict["agent_starts"] = [17]
                 elseif v == 2
+                    # conf_dict["agent_starts"] = [9, 50]
                     conf_dict["agent_starts"] = [11, 22]
                 elseif v == 4
+                    # conf_dict["agent_starts"] = [9, 22, 38, 59]
                     conf_dict["agent_starts"] = [5, 16, 18, 22]
                 elseif v == 6
+                    # conf_dict["agent_starts"] = [7, 12, 25, 38, 46, 55]
                     conf_dict["agent_starts"] = [5, 11, 16, 22, 24, 28]
                 elseif v == 8
+                    # conf_dict["agent_starts"] = [7, 9, 16, 28, 34, 41, 50, 55]
                     conf_dict["agent_starts"] = [5, 11, 9, 16, 18, 22, 24, 28]
                 elseif v == 12
+                    # conf_dict["agent_starts"] = [7, 6, 9, 16, 24, 28, 34, 37, 41, 50, 54, 55]
                     conf_dict["agent_starts"] = [1, 5, 8, 11, 12, 14, 15, 17, 20, 22, 24, 26]
                 else
                     conf_dict["agent_starts"] = [range(1, v)...]
