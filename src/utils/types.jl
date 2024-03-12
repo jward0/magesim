@@ -197,6 +197,7 @@ end
 mutable struct AgentValues
     priority_log::Array{Float64, 2}
     priority_weights::Array{Float64, 1}
+    other_targets::Array{Int64, 1}
     idleness_log::Array{Float64, 1}
     agent_dists_log::Array{Float64, 1}
     n_agents_belief::Int64
@@ -205,6 +206,7 @@ mutable struct AgentValues
     function AgentValues(n_agents::Int64, n_nodes::Int64, custom_config::UserConfig)
         new(zeros(Float64, (n_agents, n_nodes)), 
             zeros(Float64, n_nodes), 
+            zeros(Int64, n_agents),
             zeros(Float64, n_nodes),
             zeros(Float64, n_agents),
             n_agents,
@@ -285,6 +287,17 @@ struct ArrivedAtNodeMessage <: AbstractMessage
     message::Int64
 
     function ArrivedAtNodeMessage(agent::AgentState, targets::Union{Array{Int64, 1}, Nothing}, message::Int64)
+
+        new(agent.id, targets, message)
+    end
+end
+
+struct GoingToMessage <: AbstractMessage
+    source::Int64
+    targets::Union{Array{Int64, 1}, Nothing}
+    message::Int64
+
+    function GoingToMessage(agent::AgentState, targets::Union{Array{Int64, 1}, Nothing}, message::Int64)
 
         new(agent.id, targets, message)
     end

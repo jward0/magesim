@@ -1,6 +1,6 @@
 module Agent
 
-import ..Types: AgentState, WorldState, Position, AbstractAction, WaitAction, MoveToAction, StepTowardsAction, IdlenessLogMessage, PriorityMessage, PosMessage, ArrivedAtNodeMessage
+import ..Types: AgentState, WorldState, Position, AbstractAction, WaitAction, MoveToAction, StepTowardsAction, IdlenessLogMessage, PriorityMessage, PosMessage, ArrivedAtNodeMessage, GoingToMessage
 import ..AgentDynamics: calculate_next_position
 import ..Utils: get_neighbours, pos_distance, get_distances
 
@@ -98,6 +98,8 @@ function make_decisions!(agent::AgentState)
             message_received = true
         elseif message isa PosMessage
             agent.values.agent_dists_log[message.source] = pos_distance(message.message, agent.position)
+        elseif message isa GoingToMessage
+            agent.values.other_targets[message.source] = message.message
         end
     end
 
@@ -128,6 +130,7 @@ function make_decisions!(agent::AgentState)
         enqueue!(agent.outbox, PriorityMessage(agent, nothing, priorities))
 
         final_priorities = do_priority_greedy(agent, priorities)
+        # final_priorities = do_sebs_style(agent, priorities)
 
         # Prevents sitting still at node
         if agent.values.last_visited != 0
@@ -139,8 +142,11 @@ function make_decisions!(agent::AgentState)
         end
 
         target = argmax(final_priorities)
+        enqueue!(agent.outbox, GoingToMessage(agent, nothing, target))
 
         enqueue!(agent.action_queue, MoveToAction(target))
+        # agent.values.priority_log = zeros(Float64, size(agent.values.priority_log))
+        agent.values.priority_log .*= 0.99
     end
 end
 
@@ -294,6 +300,17 @@ function do_priority_greedy(agent::AgentState, self_priorities::Array{Float64, 1
     end
 
     return self_priorities .* flags
+end
+
+function do_sebs_style(agent::AgentState, self_priorities::Array{Float64, 1})
+
+    new_prio = copy(self_priorities)
+
+    for ndx in [a for a in agent.values.other_targets if a > 0]
+        new_prio[ndx] = 0
+    end
+
+    return new_prio
 end
 
 function custom_regularise(factor::Float64, data::Array{Float64, 1})
