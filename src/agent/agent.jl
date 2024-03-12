@@ -65,7 +65,7 @@ function observe_world!(agent::AgentState, world::WorldState)
         enqueue!(agent.outbox, ArrivedAtNodeMessage(agent, nothing, agent.graph_position))
     end
 
-    enqueue!(agent.outbox, PosMessage(agent, nothing, agent.position))
+    # enqueue!(agent.outbox, PosMessage(agent, nothing, agent.position))
     # enqueue!(agent.outbox, IdlenessLogMessage(agent, nothing, agent.values.idleness_log))
 end
 
@@ -85,17 +85,19 @@ function make_decisions!(agent::AgentState)
     # Check messages every timestep (necessary to avoid idleness info going stale)
     while !isempty(agent.inbox)
         message = dequeue!(agent.inbox)
+        agent.values.n_messages += 1
+        message_received = true
         if message isa IdlenessLogMessage
             # Min pool observed idleness with idleness from message
             agent.values.idleness_log = min.(agent.values.idleness_log, message.message)
-            message_received = true
+            # message_received = true
         elseif message isa ArrivedAtNodeMessage
             agent.values.idleness_log[message.message] = 0.0
-            message_received = true
+            # message_received = true
         elseif message isa PriorityMessage
             # Update priority log
             agent.values.priority_log[message.source, :] = message.message
-            message_received = true
+            # message_received = true
         elseif message isa PosMessage
             agent.values.agent_dists_log[message.source] = pos_distance(message.message, agent.position)
         elseif message isa GoingToMessage
@@ -107,8 +109,6 @@ function make_decisions!(agent::AgentState)
         empty!(agent.action_queue)
     end
 
-    # Currently only calculates at target reached and doesn't recalculate at any point
-    # May need to tweak this
     if isempty(agent.action_queue)
 
         c = mean(agent.world_state_belief.adj[agent.world_state_belief.adj .!= 0])
@@ -127,10 +127,11 @@ function make_decisions!(agent::AgentState)
 
         priorities = model_out
 
-        enqueue!(agent.outbox, PriorityMessage(agent, nothing, priorities))
+        # enqueue!(agent.outbox, PriorityMessage(agent, nothing, priorities))
 
         final_priorities = do_priority_greedy(agent, priorities)
-        # final_priorities = do_sebs_style(agent, priorities)
+        # target = do_sebs_style(agent, priorities)
+        # enqueue!(agent.outbox, GoingToMessage(agent, nothing, target))
 
         # Prevents sitting still at node
         if agent.values.last_visited != 0
@@ -142,12 +143,15 @@ function make_decisions!(agent::AgentState)
         end
 
         target = argmax(final_priorities)
-        enqueue!(agent.outbox, GoingToMessage(agent, nothing, target))
 
         enqueue!(agent.action_queue, MoveToAction(target))
-        # agent.values.priority_log = zeros(Float64, size(agent.values.priority_log))
-        agent.values.priority_log .*= 0.99
+        enqueue!(agent.outbox, PriorityMessage(agent, nothing, priorities))
+
+        agent.values.current_target = target
+
     end
+
+    agent.values.priority_log .*= 0.99
 end
 
 function distance_filter(taps, values)
@@ -310,7 +314,19 @@ function do_sebs_style(agent::AgentState, self_priorities::Array{Float64, 1})
         new_prio[ndx] = 0
     end
 
-    return new_prio
+    ns = get_neighbours(agent.graph_position, agent.world_state_belief, true)
+
+    modified_prio = zeros(size(new_prio))
+
+    for i = 1:size(new_prio)[1]
+        if i in ns
+            modified_prio[i] = new_prio[i]
+        end
+    end
+
+    target = argmax(modified_prio)
+
+    return target
 end
 
 function custom_regularise(factor::Float64, data::Array{Float64, 1})
