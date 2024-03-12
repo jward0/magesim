@@ -189,12 +189,14 @@ mutable struct AgentValues
     idleness_log::Array{Float64, 1}
     sebs_gains::Tuple{Float64, Float64}
     n_agents_belief::Int64
+    n_messages::Int64
 
     function AgentValues(n_agents::Int64, n_nodes::Int64, custom_config::UserConfig)
         new(zeros(Int64, n_agents), 
             zeros(Float64, n_nodes), 
             (custom_config.values[1], custom_config.values[2]),
-            n_agents)
+            n_agents,
+            0)
     end
 end
 

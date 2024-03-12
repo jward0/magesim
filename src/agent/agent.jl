@@ -73,6 +73,7 @@ function make_decisions!(agent::AgentState)
     # Read ArrivedAtNodeMessages to update idleness and intention logs
     while !isempty(agent.inbox)
         message = dequeue!(agent.inbox)
+        agent.values.n_messages += 1
         if message isa ArrivedAtNodeMessage
             agent.values.idleness_log[message.message[1]] = 0.0
             agent.values.intention_log[message.source] = message.message[2]

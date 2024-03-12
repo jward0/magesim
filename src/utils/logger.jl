@@ -42,21 +42,37 @@ Log multiple instances of AgentState data
 function log(target::Array{AgentState, 1}, logger::Logger, timestep::Int)
    
     header_contents = ["x$n,y$n" for n in [1:1:length(target)...]]
+    comm_header_contents = ["agent_$n" for n in [1:1:length(target)...]]
     positions = vcat([[agent.position.x, agent.position.y] for agent in target]...)
+    comm_count = [agent.values.n_messages for agent in target]
 
+    pos_fpath = string(logger.log_directory, "agent_positions.csv") 
+    comm_fpath = string(logger.log_directory, "message_counter.csv")
 
-    fpath = string(logger.log_directory, "agent_positions.csv") 
-
-    if !isfile(fpath)
+    if !isfile(pos_fpath)
         header = make_line("timestep", header_contents)
-        open(fpath, "w") do file
+        open(pos_fpath, "w") do file
             write(file, header)
             write(file,"\n")
         end
     end
 
     csv_line = make_line(timestep, string.(positions))
-    open(fpath, "a") do file
+    open(pos_fpath, "a") do file
+        write(file, csv_line)
+        write(file,"\n")
+    end
+
+    if !isfile(comm_fpath)
+        header = make_line("timestep", comm_header_contents)
+        open(comm_fpath, "w") do file
+            write(file, header)
+            write(file,"\n")
+        end
+    end
+
+    csv_line = make_line(timestep, string.(comm_count))
+    open(comm_fpath, "a") do file
         write(file, csv_line)
         write(file,"\n")
     end
