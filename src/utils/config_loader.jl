@@ -33,22 +33,28 @@ function load_configs(conf_arg::String, sweep_arg::String)
             if k == "n_agents"
                 if v == 1
                     # conf_dict["agent_starts"] = [31]
-                    conf_dict["agent_starts"] = [17]
+                    # conf_dict["agent_starts"] = [17]
+                    conf_dict["agent_starts"] = [13]
                 elseif v == 2
                     # conf_dict["agent_starts"] = [9, 50]
-                    conf_dict["agent_starts"] = [11, 22]
+                    # conf_dict["agent_starts"] = [11, 22]
+                    conf_dict["agent_starts"] = [7, 19]
                 elseif v == 4
                     # conf_dict["agent_starts"] = [9, 22, 38, 59]
-                    conf_dict["agent_starts"] = [5, 16, 18, 22]
+                    # conf_dict["agent_starts"] = [5, 16, 18, 22]
+                    conf_dict["agent_starts"] = [7, 9, 12, 19]
                 elseif v == 6
                     # conf_dict["agent_starts"] = [7, 12, 25, 38, 46, 55]
-                    conf_dict["agent_starts"] = [5, 11, 16, 22, 24, 28]
+                    # conf_dict["agent_starts"] = [5, 11, 16, 22, 24, 28]
+                    conf_dict["agent_starts"] = [3, 7, 9, 17, 19, 23]
                 elseif v == 8
                     # conf_dict["agent_starts"] = [7, 9, 16, 28, 34, 41, 50, 55]
-                    conf_dict["agent_starts"] = [5, 11, 9, 16, 18, 22, 24, 28]
+                    # conf_dict["agent_starts"] = [5, 11, 9, 16, 18, 22, 24, 28]
+                    conf_dict["agent_starts"] = [1, 5, 8, 12, 14, 18, 21, 25]
                 elseif v == 12
                     # conf_dict["agent_starts"] = [7, 6, 9, 16, 24, 28, 34, 37, 41, 50, 54, 55]
-                    conf_dict["agent_starts"] = [1, 5, 8, 11, 12, 14, 15, 17, 20, 22, 24, 26]
+                    # conf_dict["agent_starts"] = [1, 5, 8, 11, 12, 14, 15, 17, 20, 22, 24, 26]
+                    conf_dict["agent_starts"] = [1, 3, 5, 8, 11, 12, 14, 15, 18, 21, 23, 25]
                 else
                     conf_dict["agent_starts"] = [range(1, v)...]
                 end
