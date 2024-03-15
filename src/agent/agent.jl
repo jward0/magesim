@@ -135,12 +135,16 @@ function make_decisions!(agent::AgentState)
 
         # Prevents sitting still at node
         if agent.values.last_visited != 0
-            final_priorities[agent.values.last_visited] = 0.0
+            # final_priorities[agent.values.last_visited] = 0.0
+            final_priorities[agent.values.last_visited] -= 10000
         end
 
         if agent.graph_position isa Int && agent.graph_position <= agent.world_state_belief.n_nodes
-            final_priorities[agent.graph_position] = 0.0
+            # final_priorities[agent.graph_position] = 0.0
+            final_priorities[agent.graph_position] -= 10000
         end
+
+        # println(final_priorities)
 
         target = argmax(final_priorities)
 
@@ -189,6 +193,8 @@ function forward_nn(input)
     return output
 
 end
+
+# SA baseline
 
 function sd_1(input)
 
@@ -258,6 +264,147 @@ function c1(input)
     return -0.8183988 * input
 end
 
+#=
+# Candidate 5
+function sd_1(input)
+
+    out = zeros(Float64, (size(input)[1], 4))
+
+    for i in 1:size(input)[1]
+        d = input[i, :]
+        out[i, 1] =  1.98241903 * d[1] + -1.26181915 * d[2]
+        out[i, 2] = -1.16416914 * d[1] + -0.03950104 * d[2]
+        out[i, 3] = -1.53572437 * d[1] + -0.80523494 * d[2]
+        out[i, 4] = -0.67152170 * d[1] + -0.80642394 * d[2]
+    end
+
+    return leakyrelu(out, 0.3)
+end
+
+function sd_out(input)
+
+    out = zeros(Float64, (size(input)[1]))
+
+    for i in 1:size(input)[1]
+        d = input[i, :]
+        out[i] = -2.12636974 * d[1] + 1.16137201 * d[2] + 1.91836535 * d[3] + 0.29847511 * d[4]
+    end
+
+    return leakyrelu(out, 0.3)
+end
+
+function nd_1(input)
+
+    out = zeros(Float64, (size(input)[1], size(input)[2], 6))
+
+    for i in 1:size(input)[1]
+        for j in 1:size(input)[2]
+            d = input[i, j, :]
+            out[i, j, 1] =  0.93456114 * d[1] +  0.32234672 * d[2] + -0.14471714 * d[3]
+            out[i, j, 2] =  0.41134737 * d[1] +  0.22697582 * d[2] + -0.07067039 * d[3]
+            out[i, j, 3] =  0.13262621 * d[1] + -0.11402553 * d[2] +  0.00722151 * d[3]
+            out[i, j, 4] =  0.11607106 * d[1] + -0.01143001 * d[2] + -0.29395003 * d[3]
+            out[i, j, 5] =  0.02858441 * d[1] + -1.02008190 * d[2] + -0.31749845 * d[3]
+            out[i, j, 6] =  1.83966085 * d[1] + -0.16705342 * d[2] +  1.29978674 * d[3]
+        end
+    end
+
+    return leakyrelu(out, 0.3)
+end
+
+function nd_out(input)
+
+    out = zeros(Float64, (size(input)[1], size(input)[2]))
+
+    for i in 1:size(input)[1]
+        for j in 1:size(input)[2]
+            d = input[i, j, :]
+            out[i, j] = -1.48834262 * d[1] + -0.64857298 * d[2] + 0.3531105 * d[3] +  0.10315508 * d[4] + -2.46000117 * d[5] + -1.12933257 * d[6]
+        end
+    end
+
+    return leakyrelu(out, 0.3)
+end
+
+function c0(input)
+    return -1.38606064 * input
+end
+
+function c1(input)
+    return 0.51913897 * input
+end
+=#
+#=
+# Candidate 0
+function sd_1(input)
+
+    out = zeros(Float64, (size(input)[1], 4))
+
+    for i in 1:size(input)[1]
+        d = input[i, :]
+        out[i, 1] =  0.21145167 * d[1] + -0.27925428 * d[2]
+        out[i, 2] = -1.44247192 * d[1] + -1.33494336 * d[2]
+        out[i, 3] =  0.57172370 * d[1] + -0.85223489 * d[2]
+        out[i, 4] =  0.40209655 * d[1] + -0.50196633 * d[2]
+    end
+
+    return leakyrelu(out, 0.3)
+end
+
+function sd_out(input)
+
+    out = zeros(Float64, (size(input)[1]))
+
+    for i in 1:size(input)[1]
+        d = input[i, :]
+        out[i] = -1.55681413 * d[1] + 1.27792288 * d[2] + -0.51313773 * d[3] + -2.19374748 * d[4]
+    end
+
+    return leakyrelu(out, 0.3)
+end
+
+function nd_1(input)
+
+    out = zeros(Float64, (size(input)[1], size(input)[2], 6))
+
+    for i in 1:size(input)[1]
+        for j in 1:size(input)[2]
+            d = input[i, j, :]
+            out[i, j, 1] =  0.02569938 * d[1] + -0.29096973 * d[2] + -0.21568785 * d[3]
+            out[i, j, 2] =  0.41319706 * d[1] +  0.75811129 * d[2] +  0.03202006 * d[3]
+            out[i, j, 3] = -0.77203510 * d[1] +  0.47926454 * d[2] + -0.07546965 * d[3]
+            out[i, j, 4] = -0.00010602 * d[1] + -0.36923795 * d[2] + -0.56227554 * d[3]
+            out[i, j, 5] = -0.44041089 * d[1] +  0.84039208 * d[2] +  0.28826833 * d[3]
+            out[i, j, 6] =  0.21577007 * d[1] +  0.58216880 * d[2] + -0.85432579 * d[3]
+        end
+    end
+
+    return leakyrelu(out, 0.3)
+end
+
+function nd_out(input)
+
+    out = zeros(Float64, (size(input)[1], size(input)[2]))
+
+    for i in 1:size(input)[1]
+        for j in 1:size(input)[2]
+            d = input[i, j, :]
+            out[i, j] = -1.96664497 * d[1] + -1.85750399 * d[2] + -1.12159551 * d[3] + -1.70362948 * d[4] + 1.17730152 * d[5] + 1.97568741 * d[6]
+        end
+    end
+
+    return leakyrelu(out, 0.3)
+end
+
+function c0(input)
+    return -1.64993142 * input
+end
+
+function c1(input)
+    return -0.08408668 * input
+end
+=#
+
 function do_psm(agent, self_priorities, adj)
 
     # Currently NOT set up to handle non-infinite communication ranges
@@ -291,19 +438,31 @@ function do_priority_greedy(agent::AgentState, self_priorities::Array{Float64, 1
     # Note that this can only work for homogeneous agent policies
     # No guarantee of performance of behaviour otherwise
 
-    flags::Array{Float64, 1} = ones(size(self_priorities))
+    # flags::Array{Float64, 1} = ones(size(self_priorities))
+    flags::Array{Float64, 1} = zeros(size(self_priorities))
+
+    # for i in 1:size(agent.values.priority_log)[1]
+    #     if i != agent.id
+    #         flags .*= (self_priorities .> agent.values.priority_log[i, :])
+    #     end
+    # end
 
     for i in 1:size(agent.values.priority_log)[1]
         if i != agent.id
-            flags .*= (self_priorities .> agent.values.priority_log[i, :])
+            flags .-= (self_priorities .< agent.values.priority_log[i, :]) * 9999
         end
     end
 
-    if max(flags...) == 0.0
+    # if max(flags...) == 0.0
+    #     return self_priorities
+    # end
+
+    if max(flags...) == -9999
         return self_priorities
     end
 
-    return self_priorities .* flags
+    return self_priorities .+ flags
+    # return self_priorities .* flags
 end
 
 function do_sebs_style(agent::AgentState, self_priorities::Array{Float64, 1})
