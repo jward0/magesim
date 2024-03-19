@@ -28,7 +28,7 @@ function spawn_agents(world::WorldState, config::Config)
             config.comm_range,
             config.check_los, 
             config.custom_config)
-        observe_world!(agents[i], world)
+        agents[i].world_state_belief = world
     end
 
     return agents

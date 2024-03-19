@@ -1,13 +1,13 @@
 {
 	"world": "grid",
 	"headless": true,
-	"n_agents": 2,
-	"agent_starts": [1, 27],
+	"n_agents": 1,
+	"agent_starts": [13],
 	"speedup": 10000,
 	"timeout": 15000,
 	"multithreaded": true,
 	"do_log": true,
-	"comm_range": 9999,
+	"comm_range": -1.0,
 	"check_los": true,
 	"custom_config": false
 }
