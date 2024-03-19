@@ -163,7 +163,7 @@ struct WorldState
     time::Real
     done::Bool
     
-    function WorldState(nodes::Array{AbstractNode, 1},
+    function WorldState(nodes::Array{<:AbstractNode, 1},
                         n_nodes::Int,
                         map::AbstractGraph,
                         obstacle_map::Union{Nothing, Array{}},
