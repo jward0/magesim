@@ -1,5 +1,6 @@
 {
-	"n_agents": [1, 2, 4, 6, 8, 12],
-    "comm_range": [-1, 5, 10, 20, 50, 9999],
+	"world": ["cumberland"],
+    "n_agents": [1, 2, 4, 6, 8, 12],
+    "comm_range": [-1, 2.5, 5, 10, 15, 20, 25, 30, 35, 40],
     "check_los": [true, false]
 }
