@@ -206,7 +206,7 @@ mutable struct AgentValues
     current_target::Int64
 
     function AgentValues(n_agents::Int64, n_nodes::Int64, custom_config::UserConfig)
-        new(zeros(Float64, (n_agents, n_nodes)), 
+        new(ones(Float64, (n_agents, n_nodes)) .* -9999, 
             zeros(Float64, n_nodes), 
             zeros(Int64, n_agents),
             zeros(Float64, n_nodes),

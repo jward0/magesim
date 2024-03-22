@@ -65,9 +65,6 @@ function observe_world!(agent::AgentState, world::WorldState)
         agent.values.last_visited = agent.graph_position
         enqueue!(agent.outbox, ArrivedAtNodeMessage(agent, nothing, agent.graph_position))
     end
-
-    # enqueue!(agent.outbox, PosMessage(agent, nothing, agent.position))
-    # enqueue!(agent.outbox, IdlenessLogMessage(agent, nothing, agent.values.idleness_log))
 end
 
 """
@@ -91,14 +88,10 @@ function make_decisions!(agent::AgentState)
         if message isa IdlenessLogMessage
             # Min pool observed idleness with idleness from message
             agent.values.idleness_log = min.(agent.values.idleness_log, message.message)
-            # message_received = true
         elseif message isa ArrivedAtNodeMessage
             agent.values.idleness_log[message.message] = 0.0
-            # message_received = true
         elseif message isa PriorityMessage
-            # Update priority log
             agent.values.priority_log[message.source, :] = message.message
-            # message_received = true
         elseif message isa PosMessage
             agent.values.agent_dists_log[message.source] = pos_distance(message.message, agent.position)
         elseif message isa GoingToMessage
@@ -106,7 +99,7 @@ function make_decisions!(agent::AgentState)
         end
     end
 
-    if message_received
+    if message_received || agent.graph_position isa Int64
         empty!(agent.action_queue)
     end
 
@@ -115,55 +108,41 @@ function make_decisions!(agent::AgentState)
         c = mean(agent.world_state_belief.adj[agent.world_state_belief.adj .!= 0])
         adjacency_matrix = agent.world_state_belief.adj / c
 
-        # distances = [agent.world_state_belief.paths.dists[agent.graph_position, node.id] for node in agent.world_state_belief.nodes[1:agent.world_state_belief.n_nodes]]
         distances = get_distances(agent.graph_position, agent.position, agent.world_state_belief)
-        # idlenesses = [node.values.idleness for node in agent.world_state_belief.nodes[1:agent.world_state_belief.n_nodes]]
         idlenesses = agent.values.idleness_log
 
-        node_values = hcat(idlenesses/(c*agent.world_state_belief.n_nodes), distances/c)
+        node_values = hcat(idlenesses/maximum(idlenesses), distances/maximum(distances))
 
         model_in = [node_values, adjacency_matrix]
 
         model_out = vec(forward_nn(model_in))
 
-        # if agent.world_state_belief.time < 1
-        #     println(agent.world_state_belief.time)
-        #     println(node_values)
-        #     println(model_out)
-        # end
-
         priorities = model_out
-
-        # enqueue!(agent.outbox, PriorityMessage(agent, nothing, priorities))
-
         final_priorities = do_priority_greedy(agent, priorities)
-
-        # target = do_sebs_style(agent, priorities)
-        # enqueue!(agent.outbox, GoingToMessage(agent, nothing, target))
+        # final_priorities = priorities
 
         # Prevents sitting still at node
         if agent.values.last_visited != 0
-            # final_priorities[agent.values.last_visited] = 0.0
             final_priorities[agent.values.last_visited] -= 10000
         end
 
         if agent.graph_position isa Int && agent.graph_position <= agent.world_state_belief.n_nodes
-            # final_priorities[agent.graph_position] = 0.0
             final_priorities[agent.graph_position] -= 10000
         end
 
-        # println(final_priorities)
-
         target = argmax(final_priorities)
-
+        # target = do_sebs_style(agent, final_priorities)
+        
         enqueue!(agent.action_queue, MoveToAction(target))
-        enqueue!(agent.outbox, PriorityMessage(agent, nothing, priorities))
+        # enqueue!(agent.outbox, GoingToMessage(agent, nothing, target))
+
+        if agent.graph_position isa Int64
+            enqueue!(agent.outbox, PriorityMessage(agent, nothing, final_priorities))
+        end
 
         agent.values.current_target = target
 
     end
-
-    agent.values.priority_log .*= 0.99
 end
 
 function distance_filter(taps, values)
@@ -203,7 +182,7 @@ function forward_nn(input)
 end
 
 # SA baseline
-
+#=
 function sd_1(input)
 
     out = zeros(Float64, (size(input)[1], 4))
@@ -271,7 +250,7 @@ end
 function c1(input)
     return -0.8183988 * input
 end
-
+=#
 #=
 # Candidate 5
 function sd_1(input)
@@ -482,6 +461,214 @@ function c1(input)
     return -1.10066678 * input
 end
 =#
+#=
+# Candidate c
+function sd_1(input)
+
+    out = zeros(Float64, (size(input)[1], 4))
+
+    for i in 1:size(input)[1]
+        d = input[i, :]
+        out[i, 1] = -0.58406186 * d[1] + -1.13754903 * d[2]
+        out[i, 2] = -0.37576691 * d[1] + -0.12235257 * d[2]
+        out[i, 3] = -1.73644509 * d[1] +  0.13809729 * d[2]
+        out[i, 4] = -1.00878043 * d[1] + -0.60134646 * d[2]
+    end
+
+    return leakyrelu(out, 0.3)
+end
+
+function sd_out(input)
+
+    out = zeros(Float64, (size(input)[1]))
+
+    for i in 1:size(input)[1]
+        d = input[i, :]
+        out[i] = 1.55832648 * d[1] + -0.95695622 * d[2] +  -1.70631365 * d[3] + -1.97175723 * d[4]
+    end
+
+    return leakyrelu(out, 0.3)
+end
+
+function nd_1(input)
+
+    out = zeros(Float64, (size(input)[1], size(input)[2], 6))
+
+    for i in 1:size(input)[1]
+        for j in 1:size(input)[2]
+            d = input[i, j, :]
+            out[i, j, 1] = -0.88329016 * d[1] +  0.18759748 * d[2] +  0.34942367 * d[3]
+            out[i, j, 2] = -0.62774281 * d[1] +  0.23151634 * d[2] + -0.14543803 * d[3]
+            out[i, j, 3] =  0.31766794 * d[1] +  0.19683674 * d[2] + -0.01112670 * d[3]
+            out[i, j, 4] =  0.90822474 * d[1] +  0.00652581 * d[2] + -0.50223844 * d[3]
+            out[i, j, 5] =  0.46804047 * d[1] +  0.29701673 * d[2] +  0.52062282 * d[3]
+            out[i, j, 6] =  0.59898807 * d[1] + -0.45112344 * d[2] +  0.15419817 * d[3]
+        end
+    end
+
+    return leakyrelu(out, 0.3)
+end
+
+function nd_out(input)
+
+    out = zeros(Float64, (size(input)[1], size(input)[2]))
+
+    for i in 1:size(input)[1]
+        for j in 1:size(input)[2]
+            d = input[i, j, :]
+            out[i, j] = 0.30416439 * d[1] + -0.16476198 * d[2] + -2.29214487 * d[3] + -2.27658257 * d[4] + 0.53050808 * d[5] + 0.46814707 * d[6]
+        end
+    end
+
+    return leakyrelu(out, 0.3)
+end
+
+function c0(input)
+    return 2.00546969 * input
+end
+
+function c1(input)
+    return 0.29135257 * input
+end
+=#
+#=
+# Candidate e
+function sd_1(input)
+
+    out = zeros(Float64, (size(input)[1], 4))
+
+    for i in 1:size(input)[1]
+        d = input[i, :]
+        out[i, 1] =  1.55286694 * d[1] + -0.44110086 * d[2]
+        out[i, 2] = -0.67343548 * d[1] +  0.17652840 * d[2]
+        out[i, 3] = -1.67024631 * d[1] +  1.16802774 * d[2]
+        out[i, 4] = -0.40900121 * d[1] + -0.20207343 * d[2]
+    end
+
+    return leakyrelu(out, 0.3)
+end
+
+function sd_out(input)
+
+    out = zeros(Float64, (size(input)[1]))
+
+    for i in 1:size(input)[1]
+        d = input[i, :]
+        out[i] = -3.09391917 * d[1] + 1.86547219 * d[2] +  -0.70012984 * d[3] + 1.98574134 * d[4]
+    end
+
+    return leakyrelu(out, 0.3)
+end
+
+function nd_1(input)
+
+    out = zeros(Float64, (size(input)[1], size(input)[2], 6))
+
+    for i in 1:size(input)[1]
+        for j in 1:size(input)[2]
+            d = input[i, j, :]
+            out[i, j, 1] =  0.29622339 * d[1] + -1.13492925 * d[2] +  0.31488647 * d[3]
+            out[i, j, 2] = -0.42093213 * d[1] +  0.23324459 * d[2] + -0.75787474 * d[3]
+            out[i, j, 3] = -0.70319289 * d[1] + -0.83720823 * d[2] + -0.51324397 * d[3]
+            out[i, j, 4] =  0.27840781 * d[1] +  0.39243370 * d[2] + -0.51859291 * d[3]
+            out[i, j, 5] =  0.22624910 * d[1] + -0.42383448 * d[2] + -1.00603054 * d[3]
+            out[i, j, 6] =  1.06420315 * d[1] +  0.19624948 * d[2] +  1.09041112 * d[3]
+        end
+    end
+
+    return leakyrelu(out, 0.3)
+end
+
+function nd_out(input)
+
+    out = zeros(Float64, (size(input)[1], size(input)[2]))
+
+    for i in 1:size(input)[1]
+        for j in 1:size(input)[2]
+            d = input[i, j, :]
+            out[i, j] = -0.75642422 * d[1] + 0.7263272 * d[2] + 1.45487278 * d[3] + -1.63886386 * d[4] + 1.08887729 * d[5] + 0.9865759 * d[6]
+        end
+    end
+
+    return leakyrelu(out, 0.3)
+end
+
+function c0(input)
+    return -2.38748449 * input
+end
+
+function c1(input)
+    return 0.54197564 * input
+end
+=#
+# Candidate f
+function sd_1(input)
+
+    out = zeros(Float64, (size(input)[1], 4))
+
+    for i in 1:size(input)[1]
+        d = input[i, :]
+        out[i, 1] = -0.66290329 * d[1] + -1.31846606 * d[2]
+        out[i, 2] =  0.65034865 * d[1] + -1.48956611 * d[2]
+        out[i, 3] =  0.28390010 * d[1] + -0.48346823 * d[2]
+        out[i, 4] = -1.90242116 * d[1] + -0.83423582 * d[2]
+    end
+
+    return leakyrelu(out, 0.3)
+end
+
+function sd_out(input)
+
+    out = zeros(Float64, (size(input)[1]))
+
+    for i in 1:size(input)[1]
+        d = input[i, :]
+        out[i] = 1.61741099 * d[1] + -2.49534479 * d[2] + 2.38210474 * d[3] + 0.19223465 * d[4]
+    end
+
+    return leakyrelu(out, 0.3)
+end
+
+function nd_1(input)
+
+    out = zeros(Float64, (size(input)[1], size(input)[2], 6))
+
+    for i in 1:size(input)[1]
+        for j in 1:size(input)[2]
+            d = input[i, j, :]
+            out[i, j, 1] = -0.96888649 * d[1] + -0.57236659 * d[2] + -0.57240128 * d[3]
+            out[i, j, 2] = -0.59767775 * d[1] + -0.10536716 * d[2] + -0.55625470 * d[3]
+            out[i, j, 3] = -0.77850319 * d[1] +  0.52268095 * d[2] +  0.15994723 * d[3]
+            out[i, j, 4] = -0.11633870 * d[1] +  0.11544369 * d[2] +  0.37772713 * d[3]
+            out[i, j, 5] =  0.17265815 * d[1] +  1.19896348 * d[2] + -0.30094113 * d[3]
+            out[i, j, 6] = -0.12250413 * d[1] + -0.72660719 * d[2] + -0.81008904 * d[3]
+        end
+    end
+
+    return leakyrelu(out, 0.3)
+end
+
+function nd_out(input)
+
+    out = zeros(Float64, (size(input)[1], size(input)[2]))
+
+    for i in 1:size(input)[1]
+        for j in 1:size(input)[2]
+            d = input[i, j, :]
+            out[i, j] = 2.30023962 * d[1] + -0.04810535 * d[2] + -1.53099819 * d[3] + 1.86170104 * d[4] + 0.38627405 * d[5] + -0.31040836 * d[6]
+        end
+    end
+
+    return leakyrelu(out, 0.3)
+end
+
+function c0(input)
+    return -3.21830443 * input
+end
+
+function c1(input)
+    return 0.46392383 * input
+end
 
 function do_psm(agent, self_priorities, adj)
 
@@ -516,14 +703,7 @@ function do_priority_greedy(agent::AgentState, self_priorities::Array{Float64, 1
     # Note that this can only work for homogeneous agent policies
     # No guarantee of performance of behaviour otherwise
 
-    # flags::Array{Float64, 1} = ones(size(self_priorities))
     flags::Array{Float64, 1} = zeros(size(self_priorities))
-
-    # for i in 1:size(agent.values.priority_log)[1]
-    #     if i != agent.id
-    #         flags .*= (self_priorities .> agent.values.priority_log[i, :])
-    #     end
-    # end
 
     for i in 1:size(agent.values.priority_log)[1]
         if i != agent.id
@@ -531,16 +711,11 @@ function do_priority_greedy(agent::AgentState, self_priorities::Array{Float64, 1
         end
     end
 
-    # if max(flags...) == 0.0
-    #     return self_priorities
-    # end
-
     if max(flags...) == -9999
         return self_priorities
     end
 
     return self_priorities .+ flags
-    # return self_priorities .* flags
 end
 
 function do_sebs_style(agent::AgentState, self_priorities::Array{Float64, 1})
@@ -548,7 +723,7 @@ function do_sebs_style(agent::AgentState, self_priorities::Array{Float64, 1})
     new_prio = copy(self_priorities)
 
     for ndx in [a for a in agent.values.other_targets if a > 0]
-        new_prio[ndx] = 0
+        new_prio[ndx] -= 9999
     end
 
     ns = get_neighbours(agent.graph_position, agent.world_state_belief, true)
