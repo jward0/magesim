@@ -59,11 +59,18 @@ world state, and generate messages to send to other agents
 """
 function observe_world!(agent::AgentState, world::WorldState)
     agent.world_state_belief = world
-    agent.values.idleness_log = [i + 1.0 for i in agent.values.idleness_log]
+    agent.values.idleness_log .+= 1.0
     if agent.graph_position isa Int64 && agent.graph_position <= world.n_nodes
         agent.values.idleness_log[agent.graph_position] = 0.0
+        agent.values.last_last_visited = copy(agent.values.last_visited)
         agent.values.last_visited = agent.graph_position
-        enqueue!(agent.outbox, ArrivedAtNodeMessage(agent, nothing, agent.graph_position))
+    end
+    agent.values.other_targets_freshness .+= 1.0
+    for (ndx, f) in enumerate(agent.values.other_targets_freshness)
+        if f > 60
+            agent.values.other_targets[ndx] = 0
+            agent.values.priority_log[ndx, :] .*= 0
+        end
     end
 end
 
@@ -76,7 +83,7 @@ internal values
 function make_decisions!(agent::AgentState)
 
     message_received = false
-
+    
     # input[0] is data (shape=n_nodesx2 (distance, idleness))
     # input[1] is normalised weighted world adjacency matrix (shape=n_nodesxn_nodes)
 
@@ -92,14 +99,16 @@ function make_decisions!(agent::AgentState)
             agent.values.idleness_log[message.message] = 0.0
         elseif message isa PriorityMessage
             agent.values.priority_log[message.source, :] = message.message
+            agent.values.other_targets_freshness[message.source] = 0.0
         elseif message isa PosMessage
             agent.values.agent_dists_log[message.source] = pos_distance(message.message, agent.position)
         elseif message isa GoingToMessage
             agent.values.other_targets[message.source] = message.message
+            agent.values.other_targets_freshness[message.source] = 0.0
         end
     end
 
-    if message_received || agent.graph_position isa Int64
+    if agent.graph_position isa Int64
         empty!(agent.action_queue)
     end
 
@@ -118,8 +127,7 @@ function make_decisions!(agent::AgentState)
         model_out = vec(forward_nn(model_in))
 
         priorities = model_out
-        final_priorities = do_priority_greedy(agent, priorities)
-        # final_priorities = priorities
+        final_priorities = priorities
 
         # Prevents sitting still at node
         if agent.values.last_visited != 0
@@ -130,15 +138,28 @@ function make_decisions!(agent::AgentState)
             final_priorities[agent.graph_position] -= 10000
         end
 
-        target = argmax(final_priorities)
-        # target = do_sebs_style(agent, final_priorities)
+        if agent.values.last_last_visited != 0
+            final_priorities[agent.values.last_last_visited] -= 100
+        end
+
+        if maximum(agent.values.other_targets) == 0
+            long_range_target = argmax(final_priorities)
+            neighbours = get_neighbours(agent.graph_position, agent.world_state_belief, true)
+            distances_via_neighbours = map(n -> agent.world_state_belief.paths.dists[n, long_range_target] + pos_distance(agent.position, agent.world_state_belief.nodes[n].position), neighbours)
+            target = neighbours[argmin(distances_via_neighbours)]
+        else
+            target = do_sebs_style(agent, final_priorities)
+        end
         
         enqueue!(agent.action_queue, MoveToAction(target))
-        # enqueue!(agent.outbox, GoingToMessage(agent, nothing, target))
 
-        if agent.graph_position isa Int64
-            enqueue!(agent.outbox, PriorityMessage(agent, nothing, final_priorities))
-        end
+        enqueue!(agent.outbox, IdlenessLogMessage(agent, nothing, agent.values.idleness_log))
+        enqueue!(agent.outbox, GoingToMessage(agent, nothing, target))
+
+        # if agent.id == 1
+        #     println(target)
+        # end
+        # enqueue!(agent.outbox, IdlenessLogMessage(agent, nothing, agent.values.idleness_log))
 
         agent.values.current_target = target
 
@@ -181,18 +202,17 @@ function forward_nn(input)
 
 end
 
-# SA baseline
-#=
+# Candidate g
 function sd_1(input)
 
     out = zeros(Float64, (size(input)[1], 4))
 
     for i in 1:size(input)[1]
         d = input[i, :]
-        out[i, 1] = -0.02560344 * d[1] +  0.47448905 * d[2]
-        out[i, 2] =  0.37850753 * d[1] + -0.44805954 * d[2]
-        out[i, 3] =  0.72529513 * d[1] + -1.18498965 * d[2]
-        out[i, 4] =  0.73166021 * d[1] +  0.71390661 * d[2]
+        out[i, 1] =  0.39542921 * d[1] + -0.65675830 * d[2]
+        out[i, 2] =  1.04956550 * d[1] + -2.41169670 * d[2]
+        out[i, 3] = -1.76400600 * d[1] + -1.35503092 * d[2]
+        out[i, 4] =  0.35702324 * d[1] + -0.21459921 * d[2]
     end
 
     return leakyrelu(out, 0.3)
@@ -204,7 +224,7 @@ function sd_out(input)
 
     for i in 1:size(input)[1]
         d = input[i, :]
-        out[i] = -2.15976341 * d[1] + 1.89191872 * d[2] + 1.3302514 * d[3] + 1.58470547 * d[4]
+        out[i] = 1.23378153 * d[1] + -1.74570142 * d[2] + 1.67926374 * d[3] + 1.03526079 * d[4]
     end
 
     return leakyrelu(out, 0.3)
@@ -217,12 +237,12 @@ function nd_1(input)
     for i in 1:size(input)[1]
         for j in 1:size(input)[2]
             d = input[i, j, :]
-            out[i, j, 1] = -0.63064267 * d[1] + -0.66394034 * d[2] +  0.70292034 * d[3]
-            out[i, j, 2] =  0.57047792 * d[1] + -0.06849411 * d[2] + -0.43628767 * d[3]
-            out[i, j, 3] =  0.79983717 * d[1] + -0.77574031 * d[2] +  0.17639368 * d[3]
-            out[i, j, 4] =  0.31979277 * d[1] +  0.23128230 * d[2] +  0.74832512 * d[3]
-            out[i, j, 5] = -0.01553424 * d[1] +  0.78119776 * d[2] +  0.32078049 * d[3]
-            out[i, j, 6] =  0.05096390 * d[1] + -0.74479295 * d[2] + -0.62604261 * d[3]
+            out[i, j, 1] =  0.01888764 * d[1] + -0.45915342 * d[2] + -0.47627992 * d[3]
+            out[i, j, 2] =  0.37894088 * d[1] +  0.84592537 * d[2] +  0.03730955 * d[3]
+            out[i, j, 3] = -0.47623729 * d[1] + -0.48666733 * d[2] +  0.58645635 * d[3]
+            out[i, j, 4] = -0.26577757 * d[1] + -0.49801225 * d[2] + -0.00811519 * d[3]
+            out[i, j, 5] =  0.57938169 * d[1] +  1.04516341 * d[2] + -0.19110703 * d[3]
+            out[i, j, 6] = -0.13873973 * d[1] + -0.50178453 * d[2] + -0.94114514 * d[3]
         end
     end
 
@@ -236,7 +256,7 @@ function nd_out(input)
     for i in 1:size(input)[1]
         for j in 1:size(input)[2]
             d = input[i, j, :]
-            out[i, j] = -0.16932522 * d[1] + -0.08513338 * d[2] + -2.21655511 * d[3] + 0.74814952 * d[4] + -1.32369776 * d[5] + -0.30468585 * d[6]
+            out[i, j] = -1.12949772 * d[1] + 1.03677392 * d[2] + -1.21275977 * d[3] + -0.05812893 * d[4] + -1.04156908 * d[5] + 0.77585069 * d[6]
         end
     end
 
@@ -244,430 +264,11 @@ function nd_out(input)
 end
 
 function c0(input)
-    return 1.47268558 * input
+    return -0.62272069 * input
 end
 
 function c1(input)
-    return -0.8183988 * input
-end
-=#
-#=
-# Candidate 5
-function sd_1(input)
-
-    out = zeros(Float64, (size(input)[1], 4))
-
-    for i in 1:size(input)[1]
-        d = input[i, :]
-        out[i, 1] =  1.98241903 * d[1] + -1.26181915 * d[2]
-        out[i, 2] = -1.16416914 * d[1] + -0.03950104 * d[2]
-        out[i, 3] = -1.53572437 * d[1] + -0.80523494 * d[2]
-        out[i, 4] = -0.67152170 * d[1] + -0.80642394 * d[2]
-    end
-
-    return leakyrelu(out, 0.3)
-end
-
-function sd_out(input)
-
-    out = zeros(Float64, (size(input)[1]))
-
-    for i in 1:size(input)[1]
-        d = input[i, :]
-        out[i] = -2.12636974 * d[1] + 1.16137201 * d[2] + 1.91836535 * d[3] + 0.29847511 * d[4]
-    end
-
-    return leakyrelu(out, 0.3)
-end
-
-function nd_1(input)
-
-    out = zeros(Float64, (size(input)[1], size(input)[2], 6))
-
-    for i in 1:size(input)[1]
-        for j in 1:size(input)[2]
-            d = input[i, j, :]
-            out[i, j, 1] =  0.93456114 * d[1] +  0.32234672 * d[2] + -0.14471714 * d[3]
-            out[i, j, 2] =  0.41134737 * d[1] +  0.22697582 * d[2] + -0.07067039 * d[3]
-            out[i, j, 3] =  0.13262621 * d[1] + -0.11402553 * d[2] +  0.00722151 * d[3]
-            out[i, j, 4] =  0.11607106 * d[1] + -0.01143001 * d[2] + -0.29395003 * d[3]
-            out[i, j, 5] =  0.02858441 * d[1] + -1.02008190 * d[2] + -0.31749845 * d[3]
-            out[i, j, 6] =  1.83966085 * d[1] + -0.16705342 * d[2] +  1.29978674 * d[3]
-        end
-    end
-
-    return leakyrelu(out, 0.3)
-end
-
-function nd_out(input)
-
-    out = zeros(Float64, (size(input)[1], size(input)[2]))
-
-    for i in 1:size(input)[1]
-        for j in 1:size(input)[2]
-            d = input[i, j, :]
-            out[i, j] = -1.48834262 * d[1] + -0.64857298 * d[2] + 0.3531105 * d[3] +  0.10315508 * d[4] + -2.46000117 * d[5] + -1.12933257 * d[6]
-        end
-    end
-
-    return leakyrelu(out, 0.3)
-end
-
-function c0(input)
-    return -1.38606064 * input
-end
-
-function c1(input)
-    return 0.51913897 * input
-end
-=#
-#=
-# Candidate 0
-function sd_1(input)
-
-    out = zeros(Float64, (size(input)[1], 4))
-
-    for i in 1:size(input)[1]
-        d = input[i, :]
-        out[i, 1] =  0.21145167 * d[1] + -0.27925428 * d[2]
-        out[i, 2] = -1.44247192 * d[1] + -1.33494336 * d[2]
-        out[i, 3] =  0.57172370 * d[1] + -0.85223489 * d[2]
-        out[i, 4] =  0.40209655 * d[1] + -0.50196633 * d[2]
-    end
-
-    return leakyrelu(out, 0.3)
-end
-
-function sd_out(input)
-
-    out = zeros(Float64, (size(input)[1]))
-
-    for i in 1:size(input)[1]
-        d = input[i, :]
-        out[i] = -1.55681413 * d[1] + 1.27792288 * d[2] + -0.51313773 * d[3] + -2.19374748 * d[4]
-    end
-
-    return leakyrelu(out, 0.3)
-end
-
-function nd_1(input)
-
-    out = zeros(Float64, (size(input)[1], size(input)[2], 6))
-
-    for i in 1:size(input)[1]
-        for j in 1:size(input)[2]
-            d = input[i, j, :]
-            out[i, j, 1] =  0.02569938 * d[1] + -0.29096973 * d[2] + -0.21568785 * d[3]
-            out[i, j, 2] =  0.41319706 * d[1] +  0.75811129 * d[2] +  0.03202006 * d[3]
-            out[i, j, 3] = -0.77203510 * d[1] +  0.47926454 * d[2] + -0.07546965 * d[3]
-            out[i, j, 4] = -0.00010602 * d[1] + -0.36923795 * d[2] + -0.56227554 * d[3]
-            out[i, j, 5] = -0.44041089 * d[1] +  0.84039208 * d[2] +  0.28826833 * d[3]
-            out[i, j, 6] =  0.21577007 * d[1] +  0.58216880 * d[2] + -0.85432579 * d[3]
-        end
-    end
-
-    return leakyrelu(out, 0.3)
-end
-
-function nd_out(input)
-
-    out = zeros(Float64, (size(input)[1], size(input)[2]))
-
-    for i in 1:size(input)[1]
-        for j in 1:size(input)[2]
-            d = input[i, j, :]
-            out[i, j] = -1.96664497 * d[1] + -1.85750399 * d[2] + -1.12159551 * d[3] + -1.70362948 * d[4] + 1.17730152 * d[5] + 1.97568741 * d[6]
-        end
-    end
-
-    return leakyrelu(out, 0.3)
-end
-
-function c0(input)
-    return -1.64993142 * input
-end
-
-function c1(input)
-    return -0.08408668 * input
-end
-=#
-#=
-# Candidate a
-function sd_1(input)
-
-    out = zeros(Float64, (size(input)[1], 4))
-
-    for i in 1:size(input)[1]
-        d = input[i, :]
-        out[i, 1] =  0.38340402 * d[1] +  0.48314985 * d[2]
-        out[i, 2] =  0.04715937 * d[1] +  0.46571011 * d[2]
-        out[i, 3] =  0.03571544 * d[1] +  0.18513540 * d[2]
-        out[i, 4] =  1.16349590 * d[1] + -0.87012585 * d[2]
-    end
-
-    return leakyrelu(out, 0.3)
-end
-
-function sd_out(input)
-
-    out = zeros(Float64, (size(input)[1]))
-
-    for i in 1:size(input)[1]
-        d = input[i, :]
-        out[i] = -2.5669888 * d[1] + 1.0625178 * d[2] +  1.34443389 * d[3] + -2.29184781 * d[4]
-    end
-
-    return leakyrelu(out, 0.3)
-end
-
-function nd_1(input)
-
-    out = zeros(Float64, (size(input)[1], size(input)[2], 6))
-
-    for i in 1:size(input)[1]
-        for j in 1:size(input)[2]
-            d = input[i, j, :]
-            out[i, j, 1] = -0.10481829 * d[1] +  0.30997706 * d[2] + -0.28924909 * d[3]
-            out[i, j, 2] = -0.15479256 * d[1] + -0.99204339 * d[2] + -0.66706460 * d[3]
-            out[i, j, 3] = -0.82617384 * d[1] + -0.71983851 * d[2] + -0.35385266 * d[3]
-            out[i, j, 4] =  0.03228171 * d[1] + -0.00199264 * d[2] +  0.57788682 * d[3]
-            out[i, j, 5] = -0.31177772 * d[1] + -0.72719435 * d[2] + -0.51248340 * d[3]
-            out[i, j, 6] = -0.48989367 * d[1] +  0.07865114 * d[2] + -0.27926827 * d[3]
-        end
-    end
-
-    return leakyrelu(out, 0.3)
-end
-
-function nd_out(input)
-
-    out = zeros(Float64, (size(input)[1], size(input)[2]))
-
-    for i in 1:size(input)[1]
-        for j in 1:size(input)[2]
-            d = input[i, j, :]
-            out[i, j] = -1.38059483 * d[1] + 0.8793949 * d[2] + -0.90870255 * d[3] + -0.94483813 * d[4] + -1.98277356 * d[5] + 0.98023151 * d[6]
-        end
-    end
-
-    return leakyrelu(out, 0.3)
-end
-
-function c0(input)
-    return -1.41337745 * input
-end
-
-function c1(input)
-    return -1.10066678 * input
-end
-=#
-#=
-# Candidate c
-function sd_1(input)
-
-    out = zeros(Float64, (size(input)[1], 4))
-
-    for i in 1:size(input)[1]
-        d = input[i, :]
-        out[i, 1] = -0.58406186 * d[1] + -1.13754903 * d[2]
-        out[i, 2] = -0.37576691 * d[1] + -0.12235257 * d[2]
-        out[i, 3] = -1.73644509 * d[1] +  0.13809729 * d[2]
-        out[i, 4] = -1.00878043 * d[1] + -0.60134646 * d[2]
-    end
-
-    return leakyrelu(out, 0.3)
-end
-
-function sd_out(input)
-
-    out = zeros(Float64, (size(input)[1]))
-
-    for i in 1:size(input)[1]
-        d = input[i, :]
-        out[i] = 1.55832648 * d[1] + -0.95695622 * d[2] +  -1.70631365 * d[3] + -1.97175723 * d[4]
-    end
-
-    return leakyrelu(out, 0.3)
-end
-
-function nd_1(input)
-
-    out = zeros(Float64, (size(input)[1], size(input)[2], 6))
-
-    for i in 1:size(input)[1]
-        for j in 1:size(input)[2]
-            d = input[i, j, :]
-            out[i, j, 1] = -0.88329016 * d[1] +  0.18759748 * d[2] +  0.34942367 * d[3]
-            out[i, j, 2] = -0.62774281 * d[1] +  0.23151634 * d[2] + -0.14543803 * d[3]
-            out[i, j, 3] =  0.31766794 * d[1] +  0.19683674 * d[2] + -0.01112670 * d[3]
-            out[i, j, 4] =  0.90822474 * d[1] +  0.00652581 * d[2] + -0.50223844 * d[3]
-            out[i, j, 5] =  0.46804047 * d[1] +  0.29701673 * d[2] +  0.52062282 * d[3]
-            out[i, j, 6] =  0.59898807 * d[1] + -0.45112344 * d[2] +  0.15419817 * d[3]
-        end
-    end
-
-    return leakyrelu(out, 0.3)
-end
-
-function nd_out(input)
-
-    out = zeros(Float64, (size(input)[1], size(input)[2]))
-
-    for i in 1:size(input)[1]
-        for j in 1:size(input)[2]
-            d = input[i, j, :]
-            out[i, j] = 0.30416439 * d[1] + -0.16476198 * d[2] + -2.29214487 * d[3] + -2.27658257 * d[4] + 0.53050808 * d[5] + 0.46814707 * d[6]
-        end
-    end
-
-    return leakyrelu(out, 0.3)
-end
-
-function c0(input)
-    return 2.00546969 * input
-end
-
-function c1(input)
-    return 0.29135257 * input
-end
-=#
-#=
-# Candidate e
-function sd_1(input)
-
-    out = zeros(Float64, (size(input)[1], 4))
-
-    for i in 1:size(input)[1]
-        d = input[i, :]
-        out[i, 1] =  1.55286694 * d[1] + -0.44110086 * d[2]
-        out[i, 2] = -0.67343548 * d[1] +  0.17652840 * d[2]
-        out[i, 3] = -1.67024631 * d[1] +  1.16802774 * d[2]
-        out[i, 4] = -0.40900121 * d[1] + -0.20207343 * d[2]
-    end
-
-    return leakyrelu(out, 0.3)
-end
-
-function sd_out(input)
-
-    out = zeros(Float64, (size(input)[1]))
-
-    for i in 1:size(input)[1]
-        d = input[i, :]
-        out[i] = -3.09391917 * d[1] + 1.86547219 * d[2] +  -0.70012984 * d[3] + 1.98574134 * d[4]
-    end
-
-    return leakyrelu(out, 0.3)
-end
-
-function nd_1(input)
-
-    out = zeros(Float64, (size(input)[1], size(input)[2], 6))
-
-    for i in 1:size(input)[1]
-        for j in 1:size(input)[2]
-            d = input[i, j, :]
-            out[i, j, 1] =  0.29622339 * d[1] + -1.13492925 * d[2] +  0.31488647 * d[3]
-            out[i, j, 2] = -0.42093213 * d[1] +  0.23324459 * d[2] + -0.75787474 * d[3]
-            out[i, j, 3] = -0.70319289 * d[1] + -0.83720823 * d[2] + -0.51324397 * d[3]
-            out[i, j, 4] =  0.27840781 * d[1] +  0.39243370 * d[2] + -0.51859291 * d[3]
-            out[i, j, 5] =  0.22624910 * d[1] + -0.42383448 * d[2] + -1.00603054 * d[3]
-            out[i, j, 6] =  1.06420315 * d[1] +  0.19624948 * d[2] +  1.09041112 * d[3]
-        end
-    end
-
-    return leakyrelu(out, 0.3)
-end
-
-function nd_out(input)
-
-    out = zeros(Float64, (size(input)[1], size(input)[2]))
-
-    for i in 1:size(input)[1]
-        for j in 1:size(input)[2]
-            d = input[i, j, :]
-            out[i, j] = -0.75642422 * d[1] + 0.7263272 * d[2] + 1.45487278 * d[3] + -1.63886386 * d[4] + 1.08887729 * d[5] + 0.9865759 * d[6]
-        end
-    end
-
-    return leakyrelu(out, 0.3)
-end
-
-function c0(input)
-    return -2.38748449 * input
-end
-
-function c1(input)
-    return 0.54197564 * input
-end
-=#
-# Candidate f
-function sd_1(input)
-
-    out = zeros(Float64, (size(input)[1], 4))
-
-    for i in 1:size(input)[1]
-        d = input[i, :]
-        out[i, 1] = -0.66290329 * d[1] + -1.31846606 * d[2]
-        out[i, 2] =  0.65034865 * d[1] + -1.48956611 * d[2]
-        out[i, 3] =  0.28390010 * d[1] + -0.48346823 * d[2]
-        out[i, 4] = -1.90242116 * d[1] + -0.83423582 * d[2]
-    end
-
-    return leakyrelu(out, 0.3)
-end
-
-function sd_out(input)
-
-    out = zeros(Float64, (size(input)[1]))
-
-    for i in 1:size(input)[1]
-        d = input[i, :]
-        out[i] = 1.61741099 * d[1] + -2.49534479 * d[2] + 2.38210474 * d[3] + 0.19223465 * d[4]
-    end
-
-    return leakyrelu(out, 0.3)
-end
-
-function nd_1(input)
-
-    out = zeros(Float64, (size(input)[1], size(input)[2], 6))
-
-    for i in 1:size(input)[1]
-        for j in 1:size(input)[2]
-            d = input[i, j, :]
-            out[i, j, 1] = -0.96888649 * d[1] + -0.57236659 * d[2] + -0.57240128 * d[3]
-            out[i, j, 2] = -0.59767775 * d[1] + -0.10536716 * d[2] + -0.55625470 * d[3]
-            out[i, j, 3] = -0.77850319 * d[1] +  0.52268095 * d[2] +  0.15994723 * d[3]
-            out[i, j, 4] = -0.11633870 * d[1] +  0.11544369 * d[2] +  0.37772713 * d[3]
-            out[i, j, 5] =  0.17265815 * d[1] +  1.19896348 * d[2] + -0.30094113 * d[3]
-            out[i, j, 6] = -0.12250413 * d[1] + -0.72660719 * d[2] + -0.81008904 * d[3]
-        end
-    end
-
-    return leakyrelu(out, 0.3)
-end
-
-function nd_out(input)
-
-    out = zeros(Float64, (size(input)[1], size(input)[2]))
-
-    for i in 1:size(input)[1]
-        for j in 1:size(input)[2]
-            d = input[i, j, :]
-            out[i, j] = 2.30023962 * d[1] + -0.04810535 * d[2] + -1.53099819 * d[3] + 1.86170104 * d[4] + 0.38627405 * d[5] + -0.31040836 * d[6]
-        end
-    end
-
-    return leakyrelu(out, 0.3)
-end
-
-function c0(input)
-    return -3.21830443 * input
-end
-
-function c1(input)
-    return 0.46392383 * input
+    return -0.04584406 * input
 end
 
 function do_psm(agent, self_priorities, adj)
@@ -707,11 +308,11 @@ function do_priority_greedy(agent::AgentState, self_priorities::Array{Float64, 1
 
     for i in 1:size(agent.values.priority_log)[1]
         if i != agent.id
-            flags .-= (self_priorities .< agent.values.priority_log[i, :]) * 9999
+            flags .-= (self_priorities .< agent.values.priority_log[i, :]) * 999
         end
     end
 
-    if max(flags...) == -9999
+    if max(flags...) == -999
         return self_priorities
     end
 
@@ -723,12 +324,12 @@ function do_sebs_style(agent::AgentState, self_priorities::Array{Float64, 1})
     new_prio = copy(self_priorities)
 
     for ndx in [a for a in agent.values.other_targets if a > 0]
-        new_prio[ndx] -= 9999
+        new_prio[ndx] -= 999
     end
 
     ns = get_neighbours(agent.graph_position, agent.world_state_belief, true)
 
-    modified_prio = zeros(size(new_prio))
+    modified_prio = ones(size(new_prio)) * -99999.0
 
     for i = 1:size(new_prio)[1]
         if i in ns

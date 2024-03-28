@@ -202,8 +202,10 @@ mutable struct AgentValues
     agent_dists_log::Array{Float64, 1}
     n_agents_belief::Int64
     last_visited::Int64
+    last_last_visited::Int64
     n_messages::Int64
     current_target::Int64
+    other_targets_freshness::Array{Float64, 1}
 
     function AgentValues(n_agents::Int64, n_nodes::Int64, custom_config::UserConfig)
         new(ones(Float64, (n_agents, n_nodes)) .* -9999, 
@@ -214,7 +216,9 @@ mutable struct AgentValues
             n_agents,
             0,
             0,
-            0)
+            0,
+            0,
+            zeros(Float64, n_agents))
     end
 end
 

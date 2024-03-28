@@ -58,7 +58,7 @@ function load_configs(conf_arg::String, sweep_arg::String)
                 elseif v == 4
                     if conf_dict["world"] == "DIAG_floor1" 
                         conf_dict["agent_starts"] = [9, 22, 38, 59]
-                    elseif conf_dict["world"] == "example"24
+                    elseif conf_dict["world"] == "example"
                         conf_dict["agent_starts"] = [5, 16, 18, 22]
                     elseif conf_dict["world"] == "grid"
                         conf_dict["agent_starts"] = [7, 9, 12, 19]

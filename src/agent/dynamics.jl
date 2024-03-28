@@ -59,9 +59,6 @@ function calculate_next_position(agent::AgentState, target::Int64, world::WorldS
     if pos_norm(diff) == step_size
         # Stepping along edge, arrived at a (potentially intermediate) target
         new_graph_pos = t.id
-        if t.id <= world.n_nodes
-            agent.values.last_visited = t.id
-        end
         if t.id == target 
             at_target = true
         end       
