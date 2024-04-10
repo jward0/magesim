@@ -60,7 +60,9 @@ world state, and generate messages to send to other agents
 function observe_world!(agent::AgentState, world::WorldState)
     agent.world_state_belief = world
     agent.values.idleness_log .+= 1.0
-    if agent.graph_position isa Int64 && agent.graph_position <= world.n_nodes
+
+    # Upon arrival at a node:
+    if isempty(agent.action_queue) && agent.graph_position isa Int64 && agent.graph_position <= world.n_nodes
         agent.values.idleness_log[agent.graph_position] = 0.0
         agent.values.last_last_visited = copy(agent.values.last_visited)
         agent.values.last_visited = agent.graph_position
@@ -108,9 +110,9 @@ function make_decisions!(agent::AgentState)
         end
     end
 
-    if agent.graph_position isa Int64
-        empty!(agent.action_queue)
-    end
+    # if agent.graph_position isa Int64
+    #     empty!(agent.action_queue)
+    # end
 
     if isempty(agent.action_queue)
 
@@ -151,6 +153,9 @@ function make_decisions!(agent::AgentState)
             target = do_sebs_style(agent, final_priorities)
         end
         
+        enqueue!(agent.action_queue, WaitAction())
+        enqueue!(agent.action_queue, WaitAction())
+        enqueue!(agent.action_queue, WaitAction())
         enqueue!(agent.action_queue, MoveToAction(target))
 
         enqueue!(agent.outbox, IdlenessLogMessage(agent, nothing, agent.values.idleness_log))
