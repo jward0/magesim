@@ -56,7 +56,8 @@ struct Logger
     function Logger(config::Config, run_n::Int64)
 
         # log_directory = string("logs/", Dates.format(now(), "yyyymmdd_HH:MM:SS/"))
-        log_directory = string("logs/", Dates.format(now(), "yyyymmdd_HH:MM:SS/"), config.custom_config.lis, "/")
+        # log_directory = string("logs/", Dates.format(now(), "yyyymmdd_HH:MM:SS/"), config.custom_config.lis, "/")
+        log_directory = string("logs/", config.custom_config.lis, "/")
 
         if !isdir(log_directory)
             Base.Filesystem.mkpath(log_directory)
@@ -96,7 +97,7 @@ end
 
 # --- Node + map types
 
-Base.@kwdef struct NodeValues
+struct NodeValues
     """
     For python wrapping purposes, the only types supported in NodeValues are String, Int, Float, Bool, 
     and 1-d Array of these types
@@ -110,9 +111,9 @@ Base.@kwdef struct NodeValues
 
     If you do not wish to use the PettingZoo wrapper, you may disregard the above comments.
     """
-    is_reward::Array{Bool, 1} = [true, true, true, true]
+    is_reward::Array{Any, 1}
 
-    function NodeValues(is_reward::Array{Bool, 1})
+    function NodeValues(is_reward::Array{<:Any, 1})
         new(is_reward)
     end   
 end
@@ -147,7 +148,7 @@ struct Node <: AbstractNode
         position = Position(node_dict["position"]["x"] * scale_factor, 
                             node_dict["position"]["y"] * scale_factor)
         neighbours = node_dict["neighbours"]
-        values = NodeValues()
+        values = NodeValues(node_dict["values"])
 
         new(id, label, position, neighbours, values)
     end
@@ -173,7 +174,7 @@ struct WorldState
     time::Real
     done::Bool
     
-    function WorldState(nodes::Array{AbstractNode, 1},
+    function WorldState(nodes::Array{<:AbstractNode, 1},
                         n_nodes::Int,
                         map::AbstractGraph,
                         obstacle_map::Union{Nothing, Array{}},
@@ -205,9 +206,18 @@ end
 mutable struct AgentValues
     li::Float64
     cumulative_reward::Float64
+    belief_nodes_rewarding::Array{Int64,1}
+    belief_nodes_unrewarding::Array{Int64,1}
+    recent_scans_rewarding::Array{Int64,1}
+    recent_scans_unrewarding::Array{Int64,1}
+    #SEBS
+    intention_log::Array{Int64, 1}
+    idleness_log::Array{Float64, 1}
+    n_agents_belief::Int64
 
-    function AgentValues(id, custom_config)
-        new(custom_config.lis[id], 0.0)
+
+    function AgentValues(id, custom_config, n_agents::Int64, n_nodes::Int64)
+        new(custom_config.lis[id], 0.0, [], [], [], [], zeros(Int64, n_agents), zeros(Float64, n_nodes), n_agents)
     end
 end
 
@@ -227,12 +237,25 @@ mutable struct AgentState
 
     function AgentState(id::Int64, start_node_idx::Int64, start_node_pos::Position, n_agents::Int64, n_nodes::Int64, comm_range::Float64, check_los::Bool, speed::Float64, custom_config::UserConfig)
 
-        values = AgentValues(id, custom_config)
+        values = AgentValues(id, custom_config, n_agents::Int64, n_nodes::Int64)
         new(id, start_node_pos, values, Queue{AbstractAction}(), start_node_idx, speed, comm_range, check_los, 10.0, Queue{AbstractMessage}(), Queue{AbstractMessage}(), nothing)    
     end
 end
 
 # --- Message types ---
+
+
+struct ArrivedAtNodeMessage <: AbstractMessage
+    source::Int64
+    targets::Union{Array{Int64, 1}, Nothing}
+    # Node arrived at, next target
+    message::Tuple{Int64, Int64}
+
+    function ArrivedAtNodeMessage(agent::AgentState, targets::Union{Array{Int64, 1}, Nothing}, message::Tuple{Int64, Int64})
+
+        new(agent.id, targets, message)
+    end
+end
 
 struct StringMessage <: AbstractMessage
     source::Int64
@@ -242,6 +265,18 @@ struct StringMessage <: AbstractMessage
     function StringMessage(agent::AgentState, targets::Union{Array{Int64, 1}, Nothing}, message::String)
 
         new(agent.id, targets, message)
+    end
+end
+
+struct TagMessage <: AbstractMessage
+    source::Int64
+    targets::Union{Array{Int64, 1}, Nothing}
+    reward_message::Array{Int64,1}
+    unreward_message::Array{Int64,1}
+
+    function TagMessage(agent::AgentState, targets::Union{Array{Int64, 1}, Nothing}, reward_message::Array{Int64,1}, unreward_message::Array{Int64,1})
+
+        new(agent.id, targets, reward_message, unreward_message)
     end
 end
 

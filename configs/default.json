@@ -9,6 +9,6 @@
 	"do_log": false,
 	"comm_range": 9999,
 	"check_los": false,
-	"agent_speed": 1.0,
-	"custom_config": [0.1, 0.1, 0.1, 0.1]
+	"agent_speed": 0.4,
+	"custom_config": [0.0, 1.0, 1.0, 1.0]
 }
