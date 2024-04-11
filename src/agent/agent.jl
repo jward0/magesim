@@ -152,10 +152,8 @@ function make_decisions!(agent::AgentState)
         else
             target = do_sebs_style(agent, final_priorities)
         end
-        
-        enqueue!(agent.action_queue, WaitAction())
-        enqueue!(agent.action_queue, WaitAction())
-        enqueue!(agent.action_queue, WaitAction())
+
+
         enqueue!(agent.action_queue, MoveToAction(target))
 
         enqueue!(agent.outbox, IdlenessLogMessage(agent, nothing, agent.values.idleness_log))
