@@ -132,17 +132,17 @@ function make_decisions!(agent::AgentState)
         final_priorities = priorities
 
         # Prevents sitting still at node
-        if agent.values.last_visited != 0
-            final_priorities[agent.values.last_visited] -= 10000
-        end
+        # if agent.values.last_visited != 0
+        #     final_priorities[agent.values.last_visited] -= 999
+        # end
 
-        if agent.graph_position isa Int && agent.graph_position <= agent.world_state_belief.n_nodes
-            final_priorities[agent.graph_position] -= 10000
-        end
+        # if agent.graph_position isa Int && agent.graph_position <= agent.world_state_belief.n_nodes
+        #     final_priorities[agent.graph_position] -= 999
+        # end
 
-        if agent.values.last_last_visited != 0
-            final_priorities[agent.values.last_last_visited] -= 100
-        end
+        # if agent.values.last_last_visited != 0
+        #     final_priorities[agent.values.last_last_visited] -= 99
+        # end
 
         if maximum(agent.values.other_targets) == 0
             long_range_target = argmax(final_priorities)
@@ -327,7 +327,7 @@ function do_sebs_style(agent::AgentState, self_priorities::Array{Float64, 1})
     new_prio = copy(self_priorities)
 
     for ndx in [a for a in agent.values.other_targets if a > 0]
-        new_prio[ndx] -= 999
+        new_prio[ndx] -= 9999.0
     end
 
     ns = get_neighbours(agent.graph_position, agent.world_state_belief, true)
