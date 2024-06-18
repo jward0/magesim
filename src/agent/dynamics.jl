@@ -43,6 +43,10 @@ function calculate_next_position(agent::AgentState, target::Int64, world::WorldS
 
     step = operate_pos(diff, step_size/pos_norm(diff), *)
 
+    if pos_norm(diff) == 0
+        step = Position(0, 0)
+    end
+
     new_pos = operate_pos(agent.position, step, +)
 
     # Check if it would be colliding with any block points (used to handle agent collision)
