@@ -1,13 +1,13 @@
 {
-	"world": "example",
+	"world": "cumberland",
 	"headless": true,
-	"n_agents": 2,
-	"agent_starts": [1, 2],
+	"n_agents": 6,
+	"agent_starts": [4, 13, 18, 20, 28, 33],
 	"speedup": 10000,
 	"timeout": 10000,
 	"multithreaded": true,
 	"do_log": true,
-	"comm_range": 2.5,
-	"check_los": true,
+	"comm_range": 40,
+	"check_los": false,
 	"custom_config": false
 }
