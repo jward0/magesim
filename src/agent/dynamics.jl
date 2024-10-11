@@ -21,19 +21,25 @@ at_target::Bool, target reached flag
 
 function calculate_next_position(agent::AgentState, target::Int64, world::WorldState, blocked_pos::Array{Position, 1})
 
-    # Get list of valid immediate targets
+    # Break early if already at target
 
     if agent.graph_position isa Int64 && target == agent.graph_position
-        # Break early if already at target
         return agent.position, agent.graph_position, true
     end
+
+    # Get list of valid immediate targets
 
     neighbours = get_neighbours(agent.graph_position, world, false)
 
     # Select immediate node target
 
+    # TODO: modify this to account for dynamic env (move dists into agent?)
     distances_via_neighbours = map(n -> world.paths.dists[n, target] + pos_distance(agent.position, world.nodes[n].position), neighbours)
     t = world.nodes[neighbours[argmin(distances_via_neighbours)]]
+
+    # Get agent speed (based on environment dynamics)
+
+
 
     # Step along current edge towards immediate target
 

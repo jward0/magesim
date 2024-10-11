@@ -1,7 +1,7 @@
 include("src/utils/include.jl")
 
 import .Types: WorldState, AgentState, Logger, DummyNode, Config
-import .World: create_world, world_step, stop_world
+import .World: create_world, world_step!, stop_world
 import .LogWriter: log
 import .WorldRenderer: create_window, update_window!, close_window
 import .AgentHandler: spawn_agents, step_agents!
@@ -49,7 +49,7 @@ function main(args)
                 t = @elapsed begin
 
                     step_agents!(agents, world, cf.multithreaded)
-                    world_running, world, _ = world_step(world, agents)
+                    world_running, _ = world_step!(world, agents)
                     
                     if !headless
                         gtk_running = update_window!(world, agents, actual_speedup, builder)

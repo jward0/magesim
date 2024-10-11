@@ -2,8 +2,10 @@ module World
 
 import ..Types: WorldState, AgentState, Node, DummyNode, AbstractNode, Config
 import ..Utils: pos_distance, get_real_adj
+import ..WorldDynamics: generate_temporal_profiles
 using Graphs, SimpleWeightedGraphs
 using JSON
+using JLD
 
 """
     create_world(fpath::String)
@@ -53,7 +55,17 @@ function create_world(config::Config)
     # TODO: This is getting messy with adj needing paths to generate. Sticky circular dependency
     world_state = WorldState(nodes, n_nodes, graph_map, obstacle_map, scale_factor)
     adj = get_real_adj(world_state)
-    world_state = WorldState(nodes, n_nodes, graph_map, obstacle_map, scale_factor, adj)
+
+    t = @elapsed begin
+        temporal_profiles = generate_temporal_profiles(adj, config.timeout)
+    end
+    println(t)
+    world_state.adj = adj
+    world_state.temporal_profiles = temporal_profiles
+    # world_state = WorldState(nodes, n_nodes, graph_map, obstacle_map, scale_factor, adj)
+    
+    save("temporal_profiles/profile.jld", "data", temporal_profiles)
+
     return world_state
 end
 
@@ -62,10 +74,10 @@ end
 
 Return updated world state and reward allocated to agents
 """
-function world_step(world_state::WorldState, agents::Array{AgentState, 1})
 
-    nodes = copy(world_state.nodes)
-    for node in nodes
+function world_step!(world_state::WorldState, agents::Array{AgentState, 1})
+
+    for node in world_state.nodes
         if node isa Node
             node.values.idleness += 1.0
             for agent in agents
@@ -76,12 +88,35 @@ function world_step(world_state::WorldState, agents::Array{AgentState, 1})
         end
     end
 
-    updated_world_state = WorldState(nodes, world_state.n_nodes, world_state.map, world_state.obstacle_map, world_state.scale_factor, world_state.adj, world_state.paths, world_state.time + 1, world_state.done)
+    # updated_world_state = WorldState(nodes, world_state.n_nodes, world_state.map, world_state.obstacle_map, world_state.scale_factor, world_state.adj, world_state.paths, world_state.time + 1, world_state.done)
     
     rewards = zeros(Float64, length(agents))
 
-    return true, updated_world_state, rewards
+    world_state.time += 1
+
+    return true, rewards
 end
+
+# function world_step(world_state::WorldState, agents::Array{AgentState, 1})
+
+#     nodes = copy(world_state.nodes)
+#     for node in nodes
+#         if node isa Node
+#             node.values.idleness += 1.0
+#             for agent in agents
+#                 if agent.graph_position isa Int64 && agent.graph_position == node.id
+#                     node.values.idleness = 0.0
+#                 end
+#             end
+#         end
+#     end
+
+#     updated_world_state = WorldState(nodes, world_state.n_nodes, world_state.map, world_state.obstacle_map, world_state.scale_factor, world_state.adj, world_state.paths, world_state.time + 1, world_state.done)
+    
+#     rewards = zeros(Float64, length(agents))
+
+#     return true, updated_world_state, rewards
+# end
 
 """
     stop_world()

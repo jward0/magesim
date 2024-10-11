@@ -1,6 +1,6 @@
 module Types
 
-using Graphs, SimpleWeightedGraphs, DataStructures, Infinity, Dates, Flux
+using Graphs, SimpleWeightedGraphs, DataStructures, Infinity, Dates, Flux, SparseArrays
 
 # --- Abstract types ---
 
@@ -154,7 +154,8 @@ end
 Make WorldState mutable at your peril! This simulator is only guaranteed thread-safe if WorldState is immutable,
 thus allowing multiple agents in multiple threads to safely read it simultaneously
 """
-struct WorldState
+# uh-oh!
+mutable struct WorldState
     nodes::Array{AbstractNode, 1}
     n_nodes::Int
     map::AbstractGraph
@@ -162,6 +163,8 @@ struct WorldState
     scale_factor::Float64
     adj::Matrix{Float64} # Adjacency matrix of only real nodes
     paths::Graphs.FloydWarshallState  # Has fields dists, parents (for back-to-front navigation)
+    # temporal_profiles::Union{Vector{SparseMatrixCSC{Float64, Int64}}, Nothing}
+    temporal_profiles::Union{Vector{Matrix{Float64}}, Nothing}
     time::Real
     done::Bool
     
@@ -172,6 +175,8 @@ struct WorldState
                         scale_factor::Float64,
                         adj::Union{Matrix{Float64}, Nothing}=nothing,
                         paths::Union{Graphs.AbstractPathState, Nothing}=nothing,
+                        # temporal_profiles::Union{Vector{SparseMatrixCSC{Float64, Int64}}, Nothing}=nothing,
+                        temporal_profiles::Union{Vector{Matrix{Float64}}, Nothing}=nothing,
                         time::Float64=0.0, 
                         done::Bool=false)
 
@@ -185,9 +190,9 @@ struct WorldState
 
         if paths === nothing
             generated_paths = floyd_warshall_shortest_paths(map)
-            new(nodes, n_nodes, map, obstacle_map, scale_factor, new_adj, generated_paths, time, done)
+            new(nodes, n_nodes, map, obstacle_map, scale_factor, new_adj, generated_paths, temporal_profiles, time, done)
         else
-            new(nodes, n_nodes, map, obstacle_map, scale_factor, new_adj, paths, time, done)
+            new(nodes, n_nodes, map, obstacle_map, scale_factor, new_adj, paths, temporal_profiles, time, done)
         end
     end
 end
