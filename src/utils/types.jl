@@ -18,10 +18,10 @@ struct Position
 end
 
 struct UserConfig
-    field::Nothing
+    field::Array{Float64, 1}
 
     function UserConfig(args...)
-        new(nothing)
+        new(convert(Array{Float64, 1}, args[1]))
     end
 end
 

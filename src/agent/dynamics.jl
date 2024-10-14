@@ -39,13 +39,24 @@ function calculate_next_position(agent::AgentState, target::Int64, world::WorldS
 
     # Get agent speed (based on environment dynamics)
 
+    # If at node:
+    if agent.graph_position isa Int64
+        src = agent.graph_position
+        dst = t.id
+    else # If on edge: 
+        src = agent.graph_position.src
+        dst = agent.graph_position.dst
+    end
 
+    slowdown = world.temporal_profiles[floor(Integer, world.time)+1][src, dst]
+
+    speed = agent.step_size * slowdown
 
     # Step along current edge towards immediate target
 
     diff = operate_pos(t.position, agent.position, -)
 
-    step_size = min(agent.step_size, pos_norm(diff))
+    step_size = min(speed, pos_norm(diff))
 
     step = operate_pos(diff, step_size/pos_norm(diff), *)
 

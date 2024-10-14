@@ -57,9 +57,9 @@ function create_world(config::Config)
     adj = get_real_adj(world_state)
 
     t = @elapsed begin
-        temporal_profiles = generate_temporal_profiles(adj, config.timeout)
+        temporal_profiles = generate_temporal_profiles(adj, config.timeout, config.custom_config.field...)
     end
-    println(t)
+    # println(t)
     world_state.adj = adj
     world_state.temporal_profiles = temporal_profiles
     # world_state = WorldState(nodes, n_nodes, graph_map, obstacle_map, scale_factor, adj)
