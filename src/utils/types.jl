@@ -211,6 +211,10 @@ mutable struct AgentValues
     n_messages::Int64
     current_target::Int64
     other_targets_freshness::Array{Float64, 1}
+    # Keys are (src, dst), values are (time, observed weight)
+    observed_weights_log::Dict{Tuple{Int64, Int64}, Array{Tuple{Real, Float64}, 1}}
+    effective_adjacency_matrix::Matrix{Float64}
+    departed_time::Float64
 
     function AgentValues(n_agents::Int64, n_nodes::Int64, custom_config::UserConfig)
         new(ones(Float64, (n_agents, n_nodes)) .* -9999, 
@@ -223,7 +227,11 @@ mutable struct AgentValues
             0,
             0,
             0,
-            zeros(Float64, n_agents))
+            zeros(Float64, n_agents),
+            Dict(),
+            zeros(Float64, (n_nodes, n_nodes)),
+            0)
+
     end
 end
 
@@ -249,6 +257,17 @@ mutable struct AgentState
 end
 
 # --- Message types ---
+
+struct ObservedWeightMessage <: AbstractMessage
+    source::Int64
+    targets::Union{Array{Int64, 1}, Nothing}
+    # ((dst, src), (timestamp, weight))
+    message::Tuple{Tuple{Int64, Int64}, Tuple{Real, Float64}}
+
+    function ObservedWeightMessage(agent::AgentState, targets::Union{Array{Int64, 1}, Nothing}, message::Tuple{Tuple{Int64, Int64}, Tuple{Real, Float64}})
+        new(agent.id, targets, message)
+    end
+end
 
 struct PriorityMessage <: AbstractMessage
     source::Int64

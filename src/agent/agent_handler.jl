@@ -28,7 +28,10 @@ function spawn_agents(world::WorldState, config::Config)
             config.comm_range,
             config.check_los, 
             config.custom_config)
+
         agents[i].world_state_belief = world
+        agents[i].values.effective_adjacency_matrix = world.adj
+        agents[i].values.last_visited = start_nodes[i]
     end
 
     return agents

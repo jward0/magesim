@@ -51,6 +51,18 @@ function agent_step!(agent::AgentState, world::WorldState, blocked_pos::Array{Po
 
 end
 
+function update_weight_logs!(agent::AgentState, src::Int64, dst::Int64, ts::Real, w::Float64)
+    if !haskey(agent.values.observed_weights_log, (src, dst))
+        agent.values.observed_weights_log[(src, dst)] = []
+    end
+    if !haskey(agent.values.observed_weights_log, (dst, src))
+        agent.values.observed_weights_log[(dst, src)] = []
+    end
+
+    push!(agent.values.observed_weights_log[(src, dst)], (ts, w))
+    push!(agent.values.observed_weights_log[(dst, src)], (ts, w))
+end
+
 """
     observe_world!(agent::AgentState, world::WorldState)
 
@@ -66,6 +78,14 @@ function observe_world!(agent::AgentState, world::WorldState)
         agent.values.idleness_log[agent.graph_position] = 0.0
         agent.values.last_last_visited = copy(agent.values.last_visited)
         agent.values.last_visited = agent.graph_position
+
+        # Update observed weights log
+        t = convert(Float64, agent.world_state_belief.time)
+        src = agent.values.last_last_visited
+        dst = agent.values.last_visited
+
+        update_weight_logs!(agent, src, dst, t, t - agent.values.departed_time)
+
     end
     agent.values.other_targets_freshness .+= 1.0
     for (ndx, f) in enumerate(agent.values.other_targets_freshness)
@@ -107,6 +127,9 @@ function make_decisions!(agent::AgentState)
         elseif message isa GoingToMessage
             agent.values.other_targets[message.source] = message.message
             agent.values.other_targets_freshness[message.source] = 0.0
+        elseif message isa ObservedWeightMessage
+            ((src, dst), (ts, w)) = message.message
+            update_weight_logs!(agent, src, dst, ts, w)
         end
     end
 
@@ -165,6 +188,10 @@ function make_decisions!(agent::AgentState)
         # enqueue!(agent.outbox, IdlenessLogMessage(agent, nothing, agent.values.idleness_log))
 
         agent.values.current_target = target
+
+        if agent.graph_position isa Int64
+            agent.values.departed_time = agent.world_state_belief.time
+        end
 
     end
 end

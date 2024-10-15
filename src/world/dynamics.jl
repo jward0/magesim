@@ -13,9 +13,9 @@ function generate_temporal_profiles(adj::Matrix{Float64}, timeout::Int64, noise_
     # profiled_adj = Vector{SparseMatrixCSC{Float64, Int64}}(undef, timeout)
     profiled_adj = Vector{Matrix{Float64}}(undef, timeout)
 
-    ts_adj = Matrix(zeros(n_nodes, n_nodes))
-
     for t in 1:timeout
+
+        ts_adj = Matrix(zeros(n_nodes, n_nodes))
 
         for i in 1:n_edges
             ts_adj[edge_locs[1][i], edge_locs[2][i]] = profiles[i][t]

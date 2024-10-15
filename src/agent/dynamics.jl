@@ -48,7 +48,19 @@ function calculate_next_position(agent::AgentState, target::Int64, world::WorldS
         dst = agent.graph_position.dst
     end
 
+    # Correct for dummy nodes
+    if src > world.n_nodes
+        src = agent.values.last_visited
+    end
+    if dst > world.n_nodes
+        dst = target
+    end
+
     slowdown = world.temporal_profiles[floor(Integer, world.time)+1][src, dst]
+
+    # if agent.id == 1
+    #     println(slowdown)
+    # end
 
     speed = agent.step_size * slowdown
 
