@@ -18,10 +18,10 @@ struct Position
 end
 
 struct UserConfig
-    field::Array{Float64, 1}
+    data::Dict{String, Union{String, Array{Any, 1}}}
 
-    function UserConfig(args...)
-        new(convert(Array{Float64, 1}, args[1]))
+    function UserConfig(d)
+        new(d)
     end
 end
 

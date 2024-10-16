@@ -1,6 +1,8 @@
 module WorldDynamics
 
+using Dates
 using Graphs, SimpleWeightedGraphs, SparseArrays, LinearAlgebra
+using JLD
 
 function generate_temporal_profiles(adj::Matrix{Float64}, timeout::Int64, noise_scale::Float64=0.0, walk_scale::Float64=0.0)
 
@@ -10,7 +12,6 @@ function generate_temporal_profiles(adj::Matrix{Float64}, timeout::Int64, noise_
 
     profiles::Vector{Vector{Float64}} = [profile(timeout, noise_scale, walk_scale) for _ in 1:n_edges]
 
-    # profiled_adj = Vector{SparseMatrixCSC{Float64, Int64}}(undef, timeout)
     profiled_adj = Vector{Matrix{Float64}}(undef, timeout)
 
     for t in 1:timeout
@@ -47,6 +48,14 @@ function profile(timeout::Int64, noise_scale::Float64, walk_scale::Float64)
     # blocks_profile::Vector{Float64} = vec![0 for _ in 1:timeout]
 
     return noise_profile .* walk_profile
+end
+
+function load_profile(fname::String)
+    return load("temporal_profiles/"*fname*".jld", "data")
+end
+
+function save_profile(fname::String, profile::Vector{Matrix{Float64}})
+    save("temporal_profiles/"*fname*Dates.format(now(), "_yymmdd_HHMMSS")*".jld", "data", profile)
 end
 
 end

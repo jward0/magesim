@@ -2,7 +2,7 @@ module World
 
 import ..Types: WorldState, AgentState, Node, DummyNode, AbstractNode, Config
 import ..Utils: pos_distance, get_real_adj
-import ..WorldDynamics: generate_temporal_profiles
+import ..WorldDynamics: generate_temporal_profiles, save_profile, load_profile
 using Graphs, SimpleWeightedGraphs
 using JSON
 using JLD
@@ -53,18 +53,27 @@ function create_world(config::Config)
     graph_map = SimpleWeightedDiGraph(sources, destinations, weights)
 
     # TODO: This is getting messy with adj needing paths to generate. Sticky circular dependency
+    # Orrrrr just make it mutable (uh oh)
     world_state = WorldState(nodes, n_nodes, graph_map, obstacle_map, scale_factor)
     adj = get_real_adj(world_state)
-
-    t = @elapsed begin
-        temporal_profiles = generate_temporal_profiles(adj, config.timeout, config.custom_config.field...)
-    end
-    # println(t)
     world_state.adj = adj
+
+    # Generate temporal profiles
+
+    if config.custom_config.data["source"] == "generate"
+        temporal_profiles = generate_temporal_profiles(adj, config.timeout, config.custom_config.data["args"]...)
+        save_profile(config.custom_config.data["name"], temporal_profiles)
+    elseif config.custom_config.data["source"] == "load"
+        temporal_profiles = load_profile(config.custom_config.data["name"])
+    elseif config.custom_config.data["source"] == "none"
+        temporal_profiles = [ones(Float64, size(adj)) for _ in 1:config.timeout]
+    else
+        throw("Unrecognised temporal profile generation type (must be \"generate\", \"load\", or \"none\")")
+    end
+
     world_state.temporal_profiles = temporal_profiles
-    # world_state = WorldState(nodes, n_nodes, graph_map, obstacle_map, scale_factor, adj)
     
-    save("temporal_profiles/profile.jld", "data", temporal_profiles)
+    # save("temporal_profiles/profile.jld", "data", temporal_profiles)
 
     return world_state
 end
