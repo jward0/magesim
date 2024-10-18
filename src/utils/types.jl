@@ -154,17 +154,16 @@ end
 Make WorldState mutable at your peril! This simulator is only guaranteed thread-safe if WorldState is immutable,
 thus allowing multiple agents in multiple threads to safely read it simultaneously
 """
-# uh-oh!
-mutable struct WorldState
+struct WorldState
     nodes::Array{AbstractNode, 1}
     n_nodes::Int
     map::AbstractGraph
     obstacle_map::Union{Nothing, Array{}}
     scale_factor::Float64
     adj::Matrix{Float64} # Adjacency matrix of only real nodes
+    temporal_profiles::Union{Vector{Matrix{Float64}}, Nothing}
     paths::Graphs.FloydWarshallState  # Has fields dists, parents (for back-to-front navigation)
     # temporal_profiles::Union{Vector{SparseMatrixCSC{Float64, Int64}}, Nothing}
-    temporal_profiles::Union{Vector{Matrix{Float64}}, Nothing}
     time::Real
     done::Bool
     
@@ -174,9 +173,9 @@ mutable struct WorldState
                         obstacle_map::Union{Nothing, Array{}},
                         scale_factor::Float64,
                         adj::Union{Matrix{Float64}, Nothing}=nothing,
+                        temporal_profiles::Union{Vector{Matrix{Float64}}, Nothing}=nothing,
                         paths::Union{Graphs.AbstractPathState, Nothing}=nothing,
                         # temporal_profiles::Union{Vector{SparseMatrixCSC{Float64, Int64}}, Nothing}=nothing,
-                        temporal_profiles::Union{Vector{Matrix{Float64}}, Nothing}=nothing,
                         time::Float64=0.0, 
                         done::Bool=false)
 
@@ -190,11 +189,16 @@ mutable struct WorldState
 
         if paths === nothing
             generated_paths = floyd_warshall_shortest_paths(map)
-            new(nodes, n_nodes, map, obstacle_map, scale_factor, new_adj, generated_paths, temporal_profiles, time, done)
+            new(nodes, n_nodes, map, obstacle_map, scale_factor, new_adj, temporal_profiles, generated_paths, time, done)
         else
-            new(nodes, n_nodes, map, obstacle_map, scale_factor, new_adj, paths, temporal_profiles, time, done)
+            new(nodes, n_nodes, map, obstacle_map, scale_factor, new_adj, temporal_profiles, paths, time, done)
         end
     end
+
+    # function WorldState(original::WorldState, new_adj::Matrix{Float64})
+
+    #     new(original.nodes, original.n_nodes, original.map, original.obstacle_map, original.scale_factor, new_adj, original.temporal_profiles, original.paths, original.time, original.done)
+    # end
 end
 
 # --- Agent types ---
@@ -253,6 +257,24 @@ mutable struct AgentState
 
         values = AgentValues(n_agents, n_nodes, custom_config)
         new(id, start_node_pos, values, Queue{AbstractAction}(), start_node_idx, 1.0, comm_range, check_los, 10.0, Queue{AbstractMessage}(), Queue{AbstractMessage}(), nothing)    
+    end
+
+    function AgentState(
+        id::Int64,
+        position::Position,
+        values::AgentValues,
+        action_queue::Queue{AbstractAction},
+        graph_position::Union{AbstractEdge, Int64},
+        step_size::Float64,
+        comm_range::Float64,
+        check_los_flag::Bool,
+        sight_range::Float64,
+        inbox::Queue{AbstractMessage},
+        outbox::Queue{AbstractMessage},
+        world_state_belief::Union{WorldState, Nothing})
+
+        new(id, position, values, action_queue, graph_position, step_size, comm_range, check_los_flag, sight_range, inbox, outbox, world_state_belief)
+
     end
 end
 

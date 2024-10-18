@@ -56,6 +56,10 @@ function step_agents!(agents::Array{AgentState, 1},
     if multithreaded
 
         Threads.@threads for agent in agents
+            observe_world!(agent, world)
+        end
+
+        Threads.@threads for agent in agents
             if force_actions != false
                 empty!(agent.action_queue)
                 enqueue!(agent.action_queue, StepTowardsAction(force_actions[agent.id]))
@@ -64,14 +68,10 @@ function step_agents!(agents::Array{AgentState, 1},
             end
         end
     
-        for agent in agents
+        Threads.@threads for agent in agents
             agent_step!(agent, world, [agent.position for agent in agents[1:agent.id-1]])
         end
     
-        Threads.@threads for agent in agents
-            observe_world!(agent, world)
-        end
-
     else
 
         for agent in agents

@@ -4,6 +4,7 @@ import ..Types: AgentState, WorldState, Position, AbstractAction, WaitAction, Mo
 import ..AgentDynamics: calculate_next_position
 import ..Utils: get_neighbours, pos_distance, get_distances
 
+using Accessors
 using DataStructures
 using Flux
 using Graphs, SimpleWeightedGraphs, LinearAlgebra
@@ -61,6 +62,8 @@ function update_weight_logs!(agent::AgentState, src::Int64, dst::Int64, ts::Real
 
     push!(agent.values.observed_weights_log[(src, dst)], (ts, w))
     push!(agent.values.observed_weights_log[(dst, src)], (ts, w))
+    agent.world_state_belief.adj[src, dst] = w
+    agent.world_state_belief.adj[dst, src] = w
 end
 
 """
@@ -84,7 +87,8 @@ function observe_world!(agent::AgentState, world::WorldState)
         src = agent.values.last_last_visited
         dst = agent.values.last_visited
 
-        update_weight_logs!(agent, src, dst, t, t - agent.values.departed_time)
+        # update_weight_logs!(agent, src, dst, t, t - agent.values.departed_time)
+        
 
     end
     agent.values.other_targets_freshness .+= 1.0
@@ -94,6 +98,32 @@ function observe_world!(agent::AgentState, world::WorldState)
             agent.values.priority_log[ndx, :] .*= 0
         end
     end
+
+    adj_belief = world.adj ./ world.temporal_profiles[floor(Integer, world.time)+1]
+    adj_belief[isnan.(adj_belief)] .= 0.0
+    adj_belief = ceil.(adj_belief)
+    wsb = agent.world_state_belief
+    @reset wsb.adj=adj_belief
+    agent.world_state_belief = wsb
+
+    # println("___________________________________________________________-_")
+    # println(agent.world_state_belief.adj)
+
+    # @reset agent.world_state_belief.adj=adj_belief
+
+    # if world.time > 1 && world.time % 1000000 == 0
+    #     agent.world_state_belief.adj = deepcopy(world.adj ./ world.temporal_profiles[floor(Integer, world.time)+1])
+    #     agent.world_state_belief.adj[isnan.(agent.world_state_belief.adj)] .= 0.0
+    #     # println("__________________________________")
+    #     # println(world.adj)
+    #     # println(world.temporal_profiles[floor(Integer, world.time)+1])
+    #     # println(agent.world_state_belief.adj)
+    # end
+
+    # agent.world_state_belief.adj = agent.values.effective_adjacency_matrix
+    
+    # println(world.temporal_profiles[floor(Integer, world.time)+1])
+    
 end
 
 """
@@ -140,9 +170,11 @@ function make_decisions!(agent::AgentState)
     if isempty(agent.action_queue)
 
         c = mean(agent.world_state_belief.adj[agent.world_state_belief.adj .!= 0])
+
         adjacency_matrix = agent.world_state_belief.adj / c
 
-        distances = get_distances(agent.graph_position, agent.position, agent.world_state_belief)
+        distances = dijkstra_shortest_paths(SimpleWeightedDiGraph(adjacency_matrix), agent.graph_position).dists
+        # distances = get_distances(agent.graph_position, agent.position, agent.world_state_belief)
         idlenesses = agent.values.idleness_log
 
         node_values = hcat(idlenesses/maximum(idlenesses), distances/maximum(distances))
@@ -167,14 +199,16 @@ function make_decisions!(agent::AgentState)
         #     final_priorities[agent.values.last_last_visited] -= 99
         # end
 
-        if maximum(agent.values.other_targets) == 0
-            long_range_target = argmax(final_priorities)
-            neighbours = get_neighbours(agent.graph_position, agent.world_state_belief, true)
-            distances_via_neighbours = map(n -> agent.world_state_belief.paths.dists[n, long_range_target] + pos_distance(agent.position, agent.world_state_belief.nodes[n].position), neighbours)
-            target = neighbours[argmin(distances_via_neighbours)]
-        else
-            target = do_sebs_style(agent, final_priorities)
-        end
+        target = do_sebs_style(agent, final_priorities)
+
+        # if maximum(agent.values.other_targets) == 0
+        #     long_range_target = argmax(final_priorities)
+        #     neighbours = get_neighbours(agent.graph_position, agent.world_state_belief, true)
+        #     distances_via_neighbours = map(n -> agent.world_state_belief.paths.dists[n, long_range_target] + pos_distance(agent.position, agent.world_state_belief.nodes[n].position), neighbours)
+        #     target = neighbours[argmin(distances_via_neighbours)]
+        # else
+        #     target = do_sebs_style(agent, final_priorities)
+        # end
 
 
         enqueue!(agent.action_queue, MoveToAction(target))
