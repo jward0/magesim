@@ -219,6 +219,10 @@ mutable struct AgentValues
     observed_weights_log::Dict{Tuple{Int64, Int64}, Array{Tuple{Real, Float64}, 1}}
     effective_adjacency_matrix::Matrix{Float64}
     departed_time::Float64
+    strategy::String
+    # SEBS bits
+    intention_log::Array{Int64, 1}
+    sebs_gains::Tuple{Float64, Float64}
 
     function AgentValues(n_agents::Int64, n_nodes::Int64, custom_config::UserConfig)
         new(ones(Float64, (n_agents, n_nodes)) .* -9999, 
@@ -234,7 +238,10 @@ mutable struct AgentValues
             zeros(Float64, n_agents),
             Dict(),
             zeros(Float64, (n_nodes, n_nodes)),
-            0)
+            0,
+            "SEBS",
+            zeros(Int64, n_agents),
+            (0.1, 100.0))
 
     end
 end
@@ -335,12 +342,23 @@ struct StringMessage <: AbstractMessage
     end
 end
 
-struct ArrivedAtNodeMessage <: AbstractMessage
+struct ArrivedAtNodeMessageSPNS <: AbstractMessage
     source::Int64
     targets::Union{Array{Int64, 1}, Nothing}
     message::Int64
 
-    function ArrivedAtNodeMessage(agent::AgentState, targets::Union{Array{Int64, 1}, Nothing}, message::Int64)
+    function ArrivedAtNodeMessageSPNS(agent::AgentState, targets::Union{Array{Int64, 1}, Nothing}, message::Int64)
+
+        new(agent.id, targets, message)
+    end
+end
+
+struct ArrivedAtNodeMessageSEBS <: AbstractMessage
+    source::Int64
+    targets::Union{Array{Int64, 1}, Nothing}
+    message::Tuple{Int64, Int64}
+
+    function ArrivedAtNodeMessageSEBS(agent::AgentState, targets::Union{Array{Int64, 1}, Nothing}, message::Tuple{Int64, Int64})
 
         new(agent.id, targets, message)
     end
