@@ -1,14 +1,28 @@
-module Strategies
+# import ..Types: AgentState, IdlenessLogMessage, ArrivedAtNodeMessageSEBS, ArrivedAtNodeMessageSPNS, PriorityMessage, PosMessage, GoingToMessage, ObservedWeightMessage, MoveToAction
+# import ..Utils: get_neighbours
 
-import ..Types: AgentState, IdlenessLogMessage, ArrivedAtNodeMessageSEBS, ArrivedAtNodeMessageSPNS, PriorityMessage, PosMessage, GoingToMessage, ObservedWeightMessage, MoveToAction
-import ..Utils: get_neighbours
+# using Accessors
+# using DataStructures
+# using Graphs, SimpleWeightedGraphs, LinearAlgebra
+# using LinearAlgebra
+# using Statistics
+# using Flux
 
-using Accessors
-using DataStructures
-using Graphs, SimpleWeightedGraphs, LinearAlgebra
-using LinearAlgebra
-using Statistics
-using Flux
+# # Duplicated from agent.jl (yeah, yeah...)
+# function update_weight_logs!(agent::AgentState, src::Int64, dst::Int64, ts::Real, w::Float64)
+#     if !haskey(agent.values.observed_weights_log, (src, dst))
+#         agent.values.observed_weights_log[(src, dst)] = []
+#     end
+#     if !haskey(agent.values.observed_weights_log, (dst, src))
+#         agent.values.observed_weights_log[(dst, src)] = []
+#     end
+
+#     push!(agent.values.observed_weights_log[(src, dst)], (ts, w))
+#     push!(agent.values.observed_weights_log[(dst, src)], (ts, w))
+#     agent.world_state_belief.adj[src, dst] = w
+#     agent.world_state_belief.adj[dst, src] = w
+# end
+
 
 """
     make_decisions_SPNS!(agent::AgentState)
@@ -60,7 +74,8 @@ function make_decisions_SPNS!(agent::AgentState)
 
         model_in = [node_values, adjacency_matrix]
 
-        model_out = vec(forward_nn(model_in))
+        # model_out = vec(forward_nn(model_in))
+        model_out = vec(minimal_nn(node_values))
 
         priorities = model_out
         final_priorities = priorities
@@ -87,6 +102,22 @@ function distance_filter(taps, values)
 
     return taps .* values
 end
+
+
+function minimal_nn(data::Matrix{Float64})
+
+    id = data[:, 1]
+    dis = data[:, 2]
+
+    n0 = leakyrelu.(0.41935197 .* id - 1.036573603 .* dis, -0.21384633)
+    n1 = leakyrelu.(1.02416510 .* id - 0.262816527 .* dis, 2.57125805)
+    n2 = leakyrelu.(-0.43140551 .* id - 0.027082452 .* dis, 0.48526923)
+
+    out = n0 .+ n1 .+ n2
+
+    return out
+end
+
 
 function forward_nn(input)
 
@@ -277,6 +308,9 @@ function make_decisions_SEBS!(agent::AgentState)
         if message isa ArrivedAtNodeMessageSEBS
             agent.values.idleness_log[message.message[1]] = 0.0
             agent.values.intention_log[message.source] = message.message[2]
+        elseif message isa ObservedWeightMessage
+            ((src, dst), (ts, w)) = message.message
+            update_weight_logs!(agent, src, dst, ts, w)
         end
     end
 
@@ -306,6 +340,10 @@ function make_decisions_SEBS!(agent::AgentState)
             enqueue!(agent.action_queue, MoveToAction(target))
             enqueue!(agent.outbox, ArrivedAtNodeMessageSEBS(agent, nothing, (agent.graph_position, target)))
         end
+
+        if agent.graph_position isa Int64
+            agent.values.departed_time = agent.world_state_belief.time
+        end
     end
     
 end
@@ -331,6 +369,4 @@ function calculate_intention_weight(n_intentions::Int64, agent::AgentState)
 
     n_agents = agent.values.n_agents_belief
     return 2^(n_agents - n_intentions)/(2^n_agents - 1)
-end
-
 end

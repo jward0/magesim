@@ -53,7 +53,7 @@ function profile(timeout::Int64, noise_scale::Float64, walk_scale::Float64, bloc
     
     # blocks_profile::Vector{Float64} = vec![0 for _ in 1:timeout]
 
-    return noise_profile .* walk_profile .* blockage_profile
+    return clamp.(noise_profile .* walk_profile .* blockage_profile, 0.1, 1.0)
 end
 
 function load_profile(fname::String)

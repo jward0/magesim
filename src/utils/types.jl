@@ -215,14 +215,19 @@ mutable struct AgentValues
     n_messages::Int64
     current_target::Int64
     other_targets_freshness::Array{Float64, 1}
-    # Keys are (src, dst), values are (time, observed weight)
-    observed_weights_log::Dict{Tuple{Int64, Int64}, Array{Tuple{Real, Float64}, 1}}
-    effective_adjacency_matrix::Matrix{Float64}
+    # Keys are (src, dst), values are [time, observed weight]
+    # observed_weights_log must be populated such that the values are each internally sorted
+    observed_weights_log::Dict{Tuple{Int64, Int64}, Vector{Vector{Float64}}}
+    # Keys are (src, dst), values are (c, sigma, last t)
+    process_parameter_estimates::Dict{Tuple{Int64, Int64}, Tuple{Float64, Float64, Float64}}
+    effective_adj::Matrix{Float64}
     departed_time::Float64
     strategy::String
     # SEBS bits
     intention_log::Array{Int64, 1}
     sebs_gains::Tuple{Float64, Float64}
+    # Auto-tuning
+    alpha::Float64
 
     function AgentValues(n_agents::Int64, n_nodes::Int64, custom_config::UserConfig)
         new(ones(Float64, (n_agents, n_nodes)) .* -9999, 
@@ -237,11 +242,13 @@ mutable struct AgentValues
             0,
             zeros(Float64, n_agents),
             Dict(),
+            Dict(),
             zeros(Float64, (n_nodes, n_nodes)),
             0,
             "SEBS",
             zeros(Int64, n_agents),
-            (0.1, 100.0))
+            (0.1, 100.0),
+            0.0)
 
     end
 end
