@@ -86,11 +86,17 @@ end
 function log_likelihood(params::Vector{Float64}, x::Vector{Float64}, delta_t::Vector{Float64})
 
     c, sigma = params
+    sigma = max(sigma, 0)
 
     last_x = x[1:end-1]
     x = x[2:end]
 
-    first_part = sum(-log.(x.-c) .* sqrt.(delta_t) .* sigma .* sqrt(2*3.14159))
+    # println("________________________")
+    # println(x.-c)
+    # println(delta_t)
+    # println(sigma)
+
+    first_part = sum(log.(1/((x.-c) .* sqrt.(delta_t) .* sigma .* sqrt(2*3.14159))))
     second_part = sum(((log.((x.-c) ./ (last_x.-c)) .+ (0.5 .* sigma^2 .* delta_t)).^2) ./ (2 .* sigma^2 .* delta_t))
 
     l = first_part .- second_part
@@ -107,14 +113,13 @@ end
 """
 function estimate_process_parameters(edge_weights_log::Vector{Vector{Float64}})
 
-    return 0.0, 0.0
+    # return 0.0, 0.0
 
     observed_x::Vector{Float64} = [e[2] for e in edge_weights_log]
     observed_delta_t::Vector{Float64} = [edge_weights_log[i+1][1] - edge_weights_log[i][1] for i in 1:length(observed_x)-1]
-    initial_guess = [minimum(observed_x) - eps(), 2*eps()]
-    lb = [0, eps()]
-    ub = [minimum(observed_x), Inf]
-
+    initial_guess = [minimum(observed_x) - 0.1, 0.1]
+    lb = [0, 1e-6]
+    ub = [minimum(observed_x) - 1e-3, Inf]
     result = optimize(p -> log_likelihood(p, observed_x, observed_delta_t), lb, ub, initial_guess)
     c, sigma = Optim.minimizer(result)
 
@@ -131,9 +136,14 @@ end
 """
 function calculate_effective_weight(c::Float64, sigma::Float64, last_value::Float64, delta_t::Float64, alpha::Float64)
 
-    edge_variance = (last_value - c)*sqrt(exp(sigma^2 * delta_t) - 1)
+    # println("$c, $sigma")
 
-    return last_value + alpha*edge_variance
+    edge_stddev = (last_value - c)*sqrt(exp(sigma^2 * delta_t) - 1)
+
+    w = max(c, last_value + alpha*edge_stddev)
+
+    # println("$last_value, $w")
+    return w
 end
 
 """
@@ -158,7 +168,9 @@ function update_effective_adj!(agent::AgentState)
             last_value = agent.values.observed_weights_log[(src, dst)][end][2]
 
             # Ceil is as we discretise by timestep
-            agent.values.effective_adj[src, dst] = ceil(calculate_effective_weight(c, sigma, last_value, delta_t, agent.values.alpha))
+            w = ceil(calculate_effective_weight(c, sigma, last_value, delta_t, agent.values.alpha))
+            agent.values.effective_adj[src, dst] = w
+            agent.values.effective_adj[dst, src] = w
         end
     end
 end
@@ -189,10 +201,17 @@ function observe_world!(agent::AgentState, world::WorldState)
             # Comment these next two lines in for static last-obs tracking (and remove thing from make_decisions)
             # agent.values.effective_adj[src, dst] = t - agent.values.departed_time
             # agent.values.effective_adj[dst, src] = t - agent.values.departed_time
+
+            # Bits start here
             update_weight_logs!(agent, src, dst, t, t - agent.values.departed_time)
             # Estimate process params based on new info (wants moving somewhere, probably)
             # println(agent.values.observed_weights_log)
-            c, sigma = estimate_process_parameters(agent.values.observed_weights_log[(src, dst)])
+            
+            if length(agent.values.observed_weights_log[(src, dst)]) == 1
+                c, sigma = (0.0, 0.0)
+            else
+                c, sigma = estimate_process_parameters(agent.values.observed_weights_log[(src, dst)])
+            end
             # Assume symmetric
             agent.values.process_parameter_estimates[(src, dst)] = (c, sigma, t)
             agent.values.process_parameter_estimates[(dst, src)] = (c, sigma, t)
@@ -214,6 +233,7 @@ end
 function make_decisions!(agent::AgentState)
 
     update_effective_adj!(agent)
+
     wsb = agent.world_state_belief
     @reset wsb.adj=agent.values.effective_adj
     agent.world_state_belief = wsb

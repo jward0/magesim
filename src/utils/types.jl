@@ -248,7 +248,7 @@ mutable struct AgentValues
             "SEBS",
             zeros(Int64, n_agents),
             (0.1, 100.0),
-            0.0)
+            -1.0)
 
     end
 end
