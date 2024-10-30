@@ -208,6 +208,8 @@ mutable struct AgentValues
     priority_weights::Array{Float64, 1}
     other_targets::Array{Int64, 1}
     idleness_log::Array{Float64, 1}
+    last_terminal_idlenesses::Array{Float64, 1}
+    avg_i_peak::Vector{Float64} # value, t
     agent_dists_log::Array{Float64, 1}
     n_agents_belief::Int64
     last_visited::Int64
@@ -234,6 +236,8 @@ mutable struct AgentValues
             zeros(Float64, n_nodes), 
             zeros(Int64, n_agents),
             zeros(Float64, n_nodes),
+            zeros(Float64, n_nodes),
+            [0.0, 0.0],
             zeros(Float64, n_agents),
             n_agents,
             0,

@@ -151,9 +151,34 @@ end
 
     Re-calculates agent.values.effective_adj for new timestep, based on process parameter estimates
 """
-function update_effective_adj!(agent::AgentState)
+function update_effective_adj!(agent::AgentState, dt::Float64)
     
     edge_locs::Tuple{Vector{Int64}, Vector{Int64}, Vector{Float64}} = findnz(sparse(triu(agent.world_state_belief.adj)))
+
+    # Update alpha
+    mean_i = mean(agent.values.last_terminal_idlenesses[findall(!iszero, agent.values.last_terminal_idlenesses)])
+    t = agent.world_state_belief.time
+
+    agent.values.alpha = agent.values.alpha * exp(-dt/(1*mean_i))
+
+    t_last = copy(agent.values.avg_i_peak[2])
+
+    if mean_i < agent.values.avg_i_peak[1]
+        agent.values.avg_i_peak = [mean_i, t]
+    elseif t - t_last > mean_i/2
+        agent.values.alpha = -1.0
+        agent.values.avg_i_peak = [mean_i, t]
+    end
+
+    # agent.values.alpha = agent.values.alpha * exp(-1/(2 * mean(agent.values.last_terminal_idlenesses[findall(!iszero, agent.values.last_terminal_idlenesses)])))
+    # println("__________________")
+    # println(mean_i)
+    # println(t - t_last)
+    # println(exp(-1/(mean_i)))
+    # println(agent.values.alpha)
+
+    # Override for testing
+    agent.values.alpha = -1.0
     
     # Probably inefficient, can probably just go through all keys in process_parameter_estimates
     for i in 1:size(edge_locs[1])[1]
@@ -186,8 +211,25 @@ function observe_world!(agent::AgentState, world::WorldState)
     agent.world_state_belief = world
     agent.values.idleness_log .+= 1.0
 
+    # Moved this in from strategies, will break SUNS currently
+    # Read ArrivedAtNodeMessages to update idleness and intention logs
+    while !isempty(agent.inbox)
+        message = dequeue!(agent.inbox)
+        agent.values.n_messages += 1
+        if message isa ArrivedAtNodeMessageSEBS
+            n = message.message[1]
+            agent.values.last_terminal_idlenesses[n] = agent.values.idleness_log[n]
+            agent.values.idleness_log[n] = 0.0
+            agent.values.intention_log[message.source] = message.message[2]
+        elseif message isa ObservedWeightMessage
+            ((src, dst), (ts, w)) = message.message
+            update_weight_logs!(agent, src, dst, ts, w)
+        end
+    end
+
     # Upon arrival at a node:
     if isempty(agent.action_queue) && agent.graph_position isa Int64 && agent.graph_position <= world.n_nodes
+        agent.values.last_terminal_idlenesses[agent.graph_position] = agent.values.idleness_log[agent.graph_position]
         agent.values.idleness_log[agent.graph_position] = 0.0
         agent.values.last_last_visited = copy(agent.values.last_visited)
         agent.values.last_visited = agent.graph_position
@@ -196,7 +238,7 @@ function observe_world!(agent::AgentState, world::WorldState)
         t = convert(Float64, agent.world_state_belief.time)
         src = agent.values.last_last_visited
         dst = agent.values.last_visited
-        # enqueue!(agent.outbox, ObservedWeightMessage(agent, nothing, ((dst, src), (t, t - agent.values.departed_time))))
+        enqueue!(agent.outbox, ObservedWeightMessage(agent, nothing, ((dst, src), (t, t - agent.values.departed_time))))
         if src != dst
             # Comment these next two lines in for static last-obs tracking (and remove thing from make_decisions)
             # agent.values.effective_adj[src, dst] = t - agent.values.departed_time
@@ -217,10 +259,10 @@ function observe_world!(agent::AgentState, world::WorldState)
             agent.values.process_parameter_estimates[(dst, src)] = (c, sigma, t)
         end
 
+        update_effective_adj!(agent, t - agent.values.departed_time)
     end
-    agent.values.other_targets_freshness .+= 1.0
 
-    
+    agent.values.other_targets_freshness .+= 1.0
 
     # adj_belief = world.adj ./ world.temporal_profiles[floor(Integer, world.time)+1]
     # adj_belief[isnan.(adj_belief)] .= 0.0
@@ -231,8 +273,6 @@ function observe_world!(agent::AgentState, world::WorldState)
 end
 
 function make_decisions!(agent::AgentState)
-
-    update_effective_adj!(agent)
 
     wsb = agent.world_state_belief
     @reset wsb.adj=agent.values.effective_adj

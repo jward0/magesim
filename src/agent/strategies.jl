@@ -37,28 +37,28 @@ function make_decisions_SPNS!(agent::AgentState)
     # input[1] is normalised weighted world adjacency matrix (shape=n_nodesxn_nodes)
 
     # Check messages every timestep (necessary to avoid idleness info going stale)
-    while !isempty(agent.inbox)
-        message = dequeue!(agent.inbox)
-        agent.values.n_messages += 1
-        message_received = true
-        if message isa IdlenessLogMessage
-            # Min pool observed idleness with idleness from message
-            agent.values.idleness_log = min.(agent.values.idleness_log, message.message)
-        elseif message isa ArrivedAtNodeMessageSPNS
-            agent.values.idleness_log[message.message] = 0.0
-        elseif message isa PriorityMessage
-            agent.values.priority_log[message.source, :] = message.message
-            agent.values.other_targets_freshness[message.source] = 0.0
-        elseif message isa PosMessage
-            agent.values.agent_dists_log[message.source] = pos_distance(message.message, agent.position)
-        elseif message isa GoingToMessage
-            agent.values.other_targets[message.source] = message.message
-            agent.values.other_targets_freshness[message.source] = 0.0
-        elseif message isa ObservedWeightMessage
-            ((src, dst), (ts, w)) = message.message
-            update_weight_logs!(agent, src, dst, ts, w)
-        end
-    end
+    # while !isempty(agent.inbox)
+    #     message = dequeue!(agent.inbox)
+    #     agent.values.n_messages += 1
+    #     message_received = true
+    #     if message isa IdlenessLogMessage
+    #         # Min pool observed idleness with idleness from message
+    #         agent.values.idleness_log = min.(agent.values.idleness_log, message.message)
+    #     elseif message isa ArrivedAtNodeMessageSPNS
+    #         agent.values.idleness_log[message.message] = 0.0
+    #     elseif message isa PriorityMessage
+    #         agent.values.priority_log[message.source, :] = message.message
+    #         agent.values.other_targets_freshness[message.source] = 0.0
+    #     elseif message isa PosMessage
+    #         agent.values.agent_dists_log[message.source] = pos_distance(message.message, agent.position)
+    #     elseif message isa GoingToMessage
+    #         agent.values.other_targets[message.source] = message.message
+    #         agent.values.other_targets_freshness[message.source] = 0.0
+    #     elseif message isa ObservedWeightMessage
+    #         ((src, dst), (ts, w)) = message.message
+    #         update_weight_logs!(agent, src, dst, ts, w)
+    #     end
+    # end
 
     if isempty(agent.action_queue)
 
@@ -302,17 +302,19 @@ does SEBS
 function make_decisions_SEBS!(agent::AgentState)
 
     # Read ArrivedAtNodeMessages to update idleness and intention logs
-    while !isempty(agent.inbox)
-        message = dequeue!(agent.inbox)
-        agent.values.n_messages += 1
-        if message isa ArrivedAtNodeMessageSEBS
-            agent.values.idleness_log[message.message[1]] = 0.0
-            agent.values.intention_log[message.source] = message.message[2]
-        elseif message isa ObservedWeightMessage
-            ((src, dst), (ts, w)) = message.message
-            update_weight_logs!(agent, src, dst, ts, w)
-        end
-    end
+    # while !isempty(agent.inbox)
+    #     message = dequeue!(agent.inbox)
+    #     agent.values.n_messages += 1
+    #     if message isa ArrivedAtNodeMessageSEBS
+    #         n = message.message[1]
+    #         agent.values.last_terminal_idlenesses[n] = agent.values.idleness_log[n]
+    #         agent.values.idleness_log[n] = 0.0
+    #         agent.values.intention_log[message.source] = message.message[2]
+    #     elseif message isa ObservedWeightMessage
+    #         ((src, dst), (ts, w)) = message.message
+    #         update_weight_logs!(agent, src, dst, ts, w)
+    #     end
+    # end
 
     # If no action in progress, select node to move towards
     if isempty(agent.action_queue)
