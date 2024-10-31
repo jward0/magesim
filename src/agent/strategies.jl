@@ -322,6 +322,7 @@ function make_decisions_SEBS!(agent::AgentState)
         neighbours = get_neighbours(agent.graph_position, agent.world_state_belief, true)
 
         if length(neighbours) == 1
+            enqueue!(agent.outbox, ArrivedAtNodeMessageSEBS(agent, nothing, (agent.graph_position, neighbours[1])))
             enqueue!(agent.action_queue, MoveToAction(neighbours[1]))
         elseif !isa(agent.graph_position, Int64)
             # Catch the potential problem of an agent needing a new action

@@ -152,7 +152,7 @@ end
     Re-calculates agent.values.effective_adj for new timestep, based on process parameter estimates
 """
 function update_effective_adj!(agent::AgentState, dt::Float64)
-    
+
     edge_locs::Tuple{Vector{Int64}, Vector{Int64}, Vector{Float64}} = findnz(sparse(triu(agent.world_state_belief.adj)))
 
     # Update alpha
@@ -218,8 +218,9 @@ function observe_world!(agent::AgentState, world::WorldState)
         agent.values.n_messages += 1
         if message isa ArrivedAtNodeMessageSEBS
             n = message.message[1]
-            agent.values.last_terminal_idlenesses[n] = agent.values.idleness_log[n]
-            agent.values.idleness_log[n] = 0.0
+            # +/-1 here to offset messages being sent on the other side of the idleness increment
+            agent.values.last_terminal_idlenesses[n] = copy(agent.values.idleness_log[n] - 1.0)
+            agent.values.idleness_log[n] = 1.0
             agent.values.intention_log[message.source] = message.message[2]
         elseif message isa ObservedWeightMessage
             ((src, dst), (ts, w)) = message.message
@@ -229,7 +230,7 @@ function observe_world!(agent::AgentState, world::WorldState)
 
     # Upon arrival at a node:
     if isempty(agent.action_queue) && agent.graph_position isa Int64 && agent.graph_position <= world.n_nodes
-        agent.values.last_terminal_idlenesses[agent.graph_position] = agent.values.idleness_log[agent.graph_position]
+        agent.values.last_terminal_idlenesses[agent.graph_position] = copy(agent.values.idleness_log[agent.graph_position])
         agent.values.idleness_log[agent.graph_position] = 0.0
         agent.values.last_last_visited = copy(agent.values.last_visited)
         agent.values.last_visited = agent.graph_position

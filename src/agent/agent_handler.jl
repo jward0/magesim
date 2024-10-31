@@ -59,6 +59,8 @@ function step_agents!(agents::Array{AgentState, 1},
             observe_world!(agent, world)
         end
 
+        pass_messages!(agents, world)
+
         Threads.@threads for agent in agents
             if force_actions != false
                 empty!(agent.action_queue)
@@ -68,6 +70,8 @@ function step_agents!(agents::Array{AgentState, 1},
             end
         end
     
+        pass_messages!(agents, world)
+
         Threads.@threads for agent in agents
             agent_step!(agent, world, [agent.position for agent in agents[1:agent.id-1]])
         end
@@ -75,6 +79,10 @@ function step_agents!(agents::Array{AgentState, 1},
     else
 
         for agent in agents
+            observe_world!(agent, world)
+        end   
+
+        for agent in agents
             if force_actions != false
                 empty!(agent.action_queue)
                 enqueue!(agent.action_queue, StepTowardsAction(force_actions[agent.id]))
@@ -87,12 +95,9 @@ function step_agents!(agents::Array{AgentState, 1},
             agent_step!(agent, world, [agent.position for agent in agents[1:agent.id-1]])
         end
     
-        for agent in agents
-            observe_world!(agent, world)
-        end   
     end
 
-    pass_messages!(agents, world)
+    
 
 end
 
