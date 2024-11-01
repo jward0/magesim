@@ -140,7 +140,20 @@ function calculate_effective_weight(c::Float64, sigma::Float64, last_value::Floa
 
     edge_stddev = (last_value - c)*sqrt(exp(sigma^2 * delta_t) - 1)
 
+    if isnan(edge_stddev) || isinf(edge_stddev)
+        edge_stddev = 9999999
+    end
+
     w = max(c, last_value + alpha*edge_stddev)
+
+    if isnan(w)
+        println("AAAAAAAAAAAAAAAAAA")
+        println(last_value)
+        println(c)
+        println(sigma)
+        println(delta_t)
+        println(edge_stddev)
+    end
 
     # println("$last_value, $w")
     return w
@@ -165,7 +178,7 @@ function update_effective_adj!(agent::AgentState, dt::Float64)
 
     if mean_i < agent.values.avg_i_peak[1]
         agent.values.avg_i_peak = [mean_i, t]
-    elseif t - t_last > mean_i/2
+    elseif t - t_last > mean_i
         agent.values.alpha = -1.0
         agent.values.avg_i_peak = [mean_i, t]
     end
@@ -178,7 +191,7 @@ function update_effective_adj!(agent::AgentState, dt::Float64)
     # println(agent.values.alpha)
 
     # Override for testing
-    agent.values.alpha = -1.0
+    agent.values.alpha = -0.0
     
     # Probably inefficient, can probably just go through all keys in process_parameter_estimates
     for i in 1:size(edge_locs[1])[1]
@@ -193,9 +206,10 @@ function update_effective_adj!(agent::AgentState, dt::Float64)
             last_value = agent.values.observed_weights_log[(src, dst)][end][2]
 
             # Ceil is as we discretise by timestep
-            w = ceil(calculate_effective_weight(c, sigma, last_value, delta_t, agent.values.alpha))
-            agent.values.effective_adj[src, dst] = w
-            agent.values.effective_adj[dst, src] = w
+            w = calculate_effective_weight(c, sigma, last_value, delta_t, agent.values.alpha)
+
+            agent.values.effective_adj[src, dst] = ceil(w^1.0)
+            agent.values.effective_adj[dst, src] = ceil(w^1.0)
         end
     end
 end
@@ -275,8 +289,30 @@ end
 
 function make_decisions!(agent::AgentState)
 
+    e_adj_max = maximum(agent.values.effective_adj)
+    e_adj_min = minimum(agent.values.effective_adj[findall(!iszero, agent.values.effective_adj)])
+
+    target_dr = agent.values.original_dr
+    current_dr = e_adj_max / e_adj_min
+
+    zero_mask = findall(iszero, agent.values.effective_adj)
+    new_effective_adj = (agent.values.effective_adj .- e_adj_min) .* ((target_dr - 1) / (current_dr - 1)) .+ e_adj_min
+    new_effective_adj[zero_mask] .= 0.0
+
+    # println("_______________________________")
+    # println(agent.id)
+    # println(current_dr)
+    # println(target_dr)
+    # println(e_adj_min)
+    # println(((target_dr - 1) / (current_dr - 1)))
+    # println(agent.world_state_belief.adj)
+    # println(agent.values.effective_adj.^0.5)
+    # println(new_effective_adj)
+    # println(agent.world_state_belief.temporal_profiles[convert(Int64, agent.world_state_belief.time + 1)])
+
     wsb = agent.world_state_belief
-    @reset wsb.adj=agent.values.effective_adj
+    # @reset wsb.adj=agent.values.effective_adj
+    @reset wsb.adj=new_effective_adj
     agent.world_state_belief = wsb
 
     if agent.values.strategy == "SEBS"

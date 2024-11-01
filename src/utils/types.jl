@@ -53,7 +53,7 @@ struct Logger
 
     function Logger(config::Config)
 
-        log_directory = string("logs/", Dates.format(now(), "yyyymmdd_HH:MM:SS/"))
+        log_directory = string("logs/bin/", Dates.format(now(), "yyyymmdd_HH:MM:SS/"))
 
         if !isdir(log_directory)
             Base.Filesystem.mkpath(log_directory)
@@ -230,6 +230,7 @@ mutable struct AgentValues
     sebs_gains::Tuple{Float64, Float64}
     # Auto-tuning
     alpha::Float64
+    original_dr::Float64
 
     function AgentValues(n_agents::Int64, n_nodes::Int64, custom_config::UserConfig)
         new(ones(Float64, (n_agents, n_nodes)) .* -9999, 
@@ -252,7 +253,8 @@ mutable struct AgentValues
             "SEBS",
             zeros(Int64, n_agents),
             (0.1, 100.0),
-            -1.0)
+            -1.0,
+            0.0)
 
     end
 end
