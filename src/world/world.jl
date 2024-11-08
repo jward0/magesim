@@ -62,7 +62,7 @@ function create_world(config::Config)
         temporal_profiles = generate_temporal_profiles(adj, config.timeout, config.custom_config.data["args"]...)
         save_profile(config.custom_config.data["name"], temporal_profiles)
     elseif config.custom_config.data["source"] == "load"
-        temporal_profiles = load_profile(config.custom_config.data["name"])
+        temporal_profiles = load_profile("$(config.world_name)_$(config.custom_config.data["name"])")
     elseif config.custom_config.data["source"] == "none"
         temporal_profiles = [ones(Float64, size(adj)) for _ in 1:config.timeout]
     else

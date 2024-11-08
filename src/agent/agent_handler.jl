@@ -32,7 +32,7 @@ function spawn_agents(world::WorldState, config::Config)
         agents[i].world_state_belief = world
         agents[i].values.effective_adj = world.adj
         agents[i].values.last_visited = start_nodes[i]
-        agents[i].values.original_dr = 3.0 # copy(maximum(world.adj) / minimum(world.adj[findall(!iszero, world.adj)]))
+        agents[i].values.original_dr = 3.0  # copy(maximum(world.adj) / minimum(world.adj[findall(!iszero, world.adj)]))
     end
 
     return agents
@@ -56,28 +56,24 @@ function step_agents!(agents::Array{AgentState, 1},
 
     if multithreaded
 
-        Threads.@threads for agent in agents
-            observe_world!(agent, world)
-        end
-
         pass_messages!(agents, world)
 
         Threads.@threads for agent in agents
+            observe_world!(agent, world)
+
             if force_actions != false
                 empty!(agent.action_queue)
                 enqueue!(agent.action_queue, StepTowardsAction(force_actions[agent.id]))
             else
                 make_decisions!(agent)
             end
-        end
-    
-        pass_messages!(agents, world)
 
-        Threads.@threads for agent in agents
             agent_step!(agent, world, [agent.position for agent in agents[1:agent.id-1]])
         end
     
     else
+
+        pass_messages!(agents, world)
 
         for agent in agents
             observe_world!(agent, world)

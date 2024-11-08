@@ -109,9 +109,9 @@ function minimal_nn(data::Matrix{Float64})
     id = data[:, 1]
     dis = data[:, 2]
 
-    n0 = leakyrelu.(0.41935197 .* id - 1.036573603 .* dis, -0.21384633)
-    n1 = leakyrelu.(1.02416510 .* id - 0.262816527 .* dis, 2.57125805)
-    n2 = leakyrelu.(-0.43140551 .* id - 0.027082452 .* dis, 0.48526923)
+    n0 = leakyrelu.((0.41935197 .* id) .- (1.036573603 .* dis), -0.21384633)
+    n1 = leakyrelu.((1.02416510 .* id) .- (0.262816527 .* dis), 2.57125805)
+    n2 = leakyrelu.((-0.43140551 .* id) .- (0.027082452 .* dis), 0.48526923)
 
     out = n0 .+ n1 .+ n2
 

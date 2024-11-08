@@ -119,6 +119,7 @@ function process_config_dict(config_dict::Dict{String, Any})
     world_info = JSON.parsefile(string("maps/", string(config_dict["world"]), ".info"))
 
     headless::Bool = config_dict["headless"]
+    world_name::String = string(config_dict["world"])
     world_fpath::String = string("maps/", world_info["graph"])
     scale_factor::Float64 = 1.0
     if "image" in keys(world_info)
@@ -140,6 +141,7 @@ function process_config_dict(config_dict::Dict{String, Any})
     custom_config::UserConfig = UserConfig(config_dict["custom_config"])
 
     config = Config(
+        world_name,
         world_fpath, 
         obstacle_map,
         scale_factor,

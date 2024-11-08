@@ -72,6 +72,7 @@ function main(args)
         end
 
         sleep(max(1.1 - full_t, 0))
+        println(full_t)
 
         stop_world()
     end
