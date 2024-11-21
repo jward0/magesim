@@ -31,6 +31,7 @@ function spawn_agents(world::WorldState, config::Config)
 
         agents[i].world_state_belief = world
         agents[i].values.effective_adj = world.adj
+        agents[i].values.original_adj_belief = world.adj
         agents[i].values.last_visited = start_nodes[i]
         agents[i].values.original_dr = 3.0  # copy(maximum(world.adj) / minimum(world.adj[findall(!iszero, world.adj)]))
     end

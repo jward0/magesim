@@ -77,6 +77,15 @@ function update_weight_logs!(agent::AgentState, src::Int64, dst::Int64, ts::Real
 
 end
 
+function update_communicated_weights_decay!(agent::AgentState, edge::Tuple{Int64, Int64}, w::Float64)
+
+    # decay stuff
+
+    agent.values.effective_adj[edge...] = w
+    agent.values.effective_adj[reverse(edge)...] = w
+
+end
+
 """
     log_likelihood(params::Tuple{Float64, Float64}, x::Vector{Float64}, delta_t::Vector{Float64})
 
@@ -169,79 +178,8 @@ function update_effective_adj!(agent::AgentState, dt::Float64)
 
     edge_locs::Tuple{Vector{Int64}, Vector{Int64}, Vector{Float64}} = findnz(sparse(triu(agent.world_state_belief.adj)))
 
-    # Update alpha
-    # mean_i = mean(agent.values.last_terminal_idlenesses[findall(!iszero, agent.values.last_terminal_idlenesses)])
-    # t = agent.world_state_belief.time
-
-    # agent.values.alpha = agent.values.alpha * exp(-dt/(1.0*mean_i))
-
-    # t_last = copy(agent.values.avg_i_peak[2])
-
-    # if mean_i < agent.values.avg_i_peak[1]
-    #     agent.values.avg_i_peak = [mean_i, t]
-    # elseif t - t_last > mean_i
-    #     agent.values.alpha = -1.0
-    #     agent.values.avg_i_peak = [mean_i, t]
-    # end
-
-    # Candidate alpha-varying with fixed beta
-    # Better in some cases, beta = 0.25 seems ok
-    # beta = 1.0
-
-    # mean_i = mean(agent.values.last_terminal_idlenesses[findall(!iszero, agent.values.last_terminal_idlenesses)])
-    # if length(agent.values.mean_i_log) > 0
-    #     agent.values.alpha = (1 - beta) * agent.values.alpha - beta * exp(1 - (mean(agent.values.mean_i_log) / mean_i)^2)
-    # end
-
-    # push!(agent.values.mean_i_log, mean_i)
-
-    # if agent.id == 1
-    #     println(agent.values.alpha)
-    # end
-
-    # Candidate alpha-varying based on edge weights
-    # beta = 0.1
-
-    # mean_i = mean([v[end][2] for (k, v) in agent.values.observed_weights_log if v[end][2] != 0.0])
-    # if !isnan(mean_i)
-
-    #     if length(agent.values.mean_i_log) > 0
-    #         m = mean(agent.values.mean_i_log[ceil(Int64, end/10):end])
-    #         agent.values.alpha = (1 - beta) * agent.values.alpha - beta * max((mean_i - m)/m, 0.0)
-    #         if agent.id == 1
-    #             # println(mean_i)
-    #             # println(m)
-    #             # println(agent.values.alpha)
-    #             # [v[end][2] for (k, v) in agent.values.observed_weights_log if v[end][2] != 0.0])
-    #             # print(agent.values.observed_weights_log)
-    #             # println("_________________")
-    #         end
-            
-    #         # exp(0-(mean_i/mean(agent.values.mean_i_log[ceil(Int64, end/10):end])))
-    #     end
-
-    #     push!(agent.values.mean_i_log, mean_i)
-    # end
-
-    # if agent.id == 1
-    #     # println("=======================")
-    #     # println(agent.values.observed_weights_log)
-    #     # println(mean_i)
-    #     println(agent.values.alpha)
-    # end
-
-    # override
-    # agent.values.alpha = -1.0/(agent.values.n_agents_belief^2)
-    
-    # agent.values.alpha = agent.values.alpha * exp(-1/(2 * mean(agent.values.last_terminal_idlenesses[findall(!iszero, agent.values.last_terminal_idlenesses)])))
-    # println("__________________")
-    # println(mean_i)
-    # println(t - t_last)
-    # println(exp(-1/(mean_i)))
-    # println(agent.values.alpha)
-
     # Override for testing
-    # agent.values.alpha = -0.25
+    agent.values.alpha = -0.5
     
     # Probably inefficient, can probably just go through all keys in process_parameter_estimates
     for i in 1:size(edge_locs[1])[1]
@@ -264,15 +202,30 @@ function update_effective_adj!(agent::AgentState, dt::Float64)
     end
 end
 
-update_effective_adj_decay!(agent::AgentState, visited_edge::Tuple{Int64, Int64}, observed_w::Float64)
 
-    decay_constant = 0.9
+function update_effective_adj_decay!(agent::AgentState, visited_edge::Tuple{Int64, Int64}, observed_w::Float64)
+
+    # ~~~ decay stuff
+    # decay_constant = lr
+    decay_constant = 0.975
+    mask = findall(iszero, agent.values.effective_adj)
+
+    # relative_obstruction = (agent.values.effective_adj .- agent.values.original_adj_belief)
+    # relative_obstruction[findall(isnan, relative_obstruction)] .= 0.0
+
+
+    # regressed_obstruction = (decay_constant .* (relative_obstruction .- mean(relative_obstruction))) .+ mean(relative_obstruction)
+
+    # agent.values.effective_adj = regressed_obstruction .+ agent.values.original_adj_belief
 
     mean_w = mean(agent.values.effective_adj[findall(!iszero, agent.values.effective_adj)])
     agent.values.effective_adj = (decay_constant .* (agent.values.effective_adj .- mean_w)) .+ mean_w
 
+    agent.values.effective_adj[mask] .= 0.0
+
     agent.values.effective_adj[visited_edge...] = observed_w
     agent.values.effective_adj[reverse(visited_edge)...] = observed_w
+
 end
 
 """
@@ -305,7 +258,8 @@ function observe_world!(agent::AgentState, world::WorldState)
             agent.values.other_targets_freshness[message.source] = 0.0
         elseif message isa ObservedWeightMessage
             ((src, dst), (ts, w)) = message.message
-            update_weight_logs!(agent, src, dst, ts, w)
+            # update_weight_logs!(agent, src, dst, ts, w)
+            update_communicated_weights_decay!(agent, (src, dst), w)
         end
     end
 
@@ -328,7 +282,8 @@ function observe_world!(agent::AgentState, world::WorldState)
 
             # Bits start here
             
-            update_weight_logs!(agent, src, dst, t, t - agent.values.departed_time)
+            # update_weight_logs!(agent, src, dst, t, t - agent.values.departed_time)
+            """
             # Estimate process params based on new info (wants moving somewhere, probably)
             # println(agent.values.observed_weights_log)
             
@@ -340,10 +295,12 @@ function observe_world!(agent::AgentState, world::WorldState)
             # Assume symmetric
             agent.values.process_parameter_estimates[(src, dst)] = (c, sigma, t)
             agent.values.process_parameter_estimates[(dst, src)] = (c, sigma, t)
+            """
+            update_effective_adj_decay!(agent, (src, dst), t - agent.values.departed_time)
             
         end
         # If non-static
-        update_effective_adj!(agent, t - agent.values.departed_time)
+        # update_effective_adj!(agent, t - agent.values.departed_time)
     end
 
     agent.values.other_targets_freshness .+= 1.0
@@ -355,22 +312,9 @@ function make_decisions!(agent::AgentState)
     # If perfect
     # tp = agent.world_state_belief.temporal_profiles[floor(Integer, agent.world_state_belief.time)+1]
     # new_effective_adj = agent.world_state_belief.adj ./ tp
+    # new_effective_adj[isnan.(new_effective_adj)] .= 0.0
 
-    # If dr varying
-    # e_adj_max = maximum(agent.values.effective_adj)
-    # e_adj_min = minimum(agent.values.effective_adj[findall(!iszero, agent.values.effective_adj)])
-
-    # target_dr = agent.values.original_dr
-    # current_dr = e_adj_max / e_adj_min
-
-    # if current_dr > target_dr
-    #     zero_mask = findall(iszero, agent.values.effective_adj)
-    #     new_effective_adj = (agent.values.effective_adj .- e_adj_min) .* ((target_dr - 1) / (current_dr - 1)) .+ e_adj_min
-    #     new_effective_adj[zero_mask] .= 0.0
-    # else
-    #     new_effective_adj = agent.values.effective_adj
-    # end
-
+    
     # otherwise
     new_effective_adj = agent.values.effective_adj
 

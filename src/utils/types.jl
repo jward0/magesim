@@ -233,6 +233,7 @@ mutable struct AgentValues
     # Auto-tuning
     alpha::Float64
     original_dr::Float64
+    original_adj_belief::Matrix{Float64}
 
     function AgentValues(n_agents::Int64, n_nodes::Int64, custom_config::UserConfig)
         new(ones(Float64, (n_agents, n_nodes)) .* -9999, 
@@ -257,7 +258,8 @@ mutable struct AgentValues
             zeros(Int64, n_agents),
             (0.1, 100.0),
             -1.0,
-            0.0)
+            0.0,
+            zeros(Float64, (n_nodes, n_nodes)))
 
     end
 end
