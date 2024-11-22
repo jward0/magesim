@@ -91,7 +91,7 @@ end
 
 # --- Node + map types
 
-Base.@kwdef struct NodeValues
+Base.@kwdef mutable struct NodeValues
     """
     For python wrapping purposes, the only types supported in NodeValues are String, Int, Float, Bool, 
     and 1-d Array of these types
@@ -105,9 +105,7 @@ Base.@kwdef struct NodeValues
 
     If you do not wish to use the PettingZoo wrapper, you may disregard the above comments.
     """
-    value_string::String = "10"
-    value_arr::Array{Int64} = [1, 2, 3]
-    value_float::Float64 = 0.1
+    idleness::Float64 = 0.0
 
 end
 
@@ -160,6 +158,7 @@ struct WorldState
     scale_factor::Float64
     adj::Matrix{Float64} # Adjacency matrix of only real nodes
     paths::Graphs.FloydWarshallState  # Has fields dists, parents (for back-to-front navigation)
+    weight_limited_paths::Vector{Vector{Vector{Tuple{Int64, Float64}}}}
     time::Real
     done::Bool
     
@@ -170,8 +169,10 @@ struct WorldState
                         scale_factor::Float64,
                         adj::Union{Matrix{Float64}, Nothing}=nothing,
                         paths::Union{Graphs.AbstractPathState, Nothing}=nothing,
+                        weight_limited_paths::Union{Vector{Vector{Vector{Tuple{Int64, Float64}}}}, Nothing}=nothing,
                         time::Float64=0.0, 
-                        done::Bool=false)
+                        done::Bool=false,
+                        )
 
         # TODO: sort all this out properly
 
@@ -181,11 +182,17 @@ struct WorldState
             new_adj = adj
         end
 
+        if weight_limited_paths === nothing
+            wlp = []
+        else
+            wlp = weight_limited_paths
+        end
+
         if paths === nothing
             generated_paths = floyd_warshall_shortest_paths(map)
-            new(nodes, n_nodes, map, obstacle_map, scale_factor, new_adj, generated_paths, time, done)
+            new(nodes, n_nodes, map, obstacle_map, scale_factor, new_adj, generated_paths, wlp, time, done)
         else
-            new(nodes, n_nodes, map, obstacle_map, scale_factor, new_adj, paths, time, done)
+            new(nodes, n_nodes, map, obstacle_map, scale_factor, new_adj, paths, wlp, time, done)
         end
     end
 end
@@ -193,10 +200,14 @@ end
 # --- Agent types ---
 
 struct AgentValues
-    field::Nothing
+    projected_node_visit_times::Vector{Queue{Float64}}
+    node_idleness_log::Vector{Float64}
 
-    function AgentValues(args...)
-        new(nothing)
+    function AgentValues(n_nodes::Int64)
+        new(
+            [Queue{Float64}() for _ in 1:n_nodes],
+            zeros(Float64, n_nodes)
+        )
     end
 end
 
@@ -216,19 +227,20 @@ mutable struct AgentState
 
     function AgentState(id::Int64, start_node_idx::Int64, start_node_pos::Position, n_agents::Int64, n_nodes::Int64, comm_range::Float64, check_los::Bool, custom_config::UserConfig)
 
-        values = AgentValues(n_agents, n_nodes, custom_config)
+        values = AgentValues(n_nodes)
         new(id, start_node_pos, values, Queue{AbstractAction}(), start_node_idx, 1.0, comm_range, check_los, 10.0, Queue{AbstractMessage}(), Queue{AbstractMessage}(), nothing)    
     end
 end
 
 # --- Message types ---
 
-struct StringMessage <: AbstractMessage
+struct IntendedPathMessage <: AbstractMessage
     source::Int64
     targets::Union{Array{Int64, 1}, Nothing}
-    message::String
+    # Each entry is (node ID, projected visit time)
+    message::Vector{Tuple{Int64, Float64}}
 
-    function StringMessage(agent::AgentState, targets::Union{Array{Int64, 1}, Nothing}, message::String)
+    function IntendedPathMessage(agent::AgentState, targets::Union{Array{Int64, 1}, Nothing}, message::Vector{Tuple{Int64, Float64}})
 
         new(agent.id, targets, message)
     end

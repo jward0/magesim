@@ -4,6 +4,7 @@ import ..Types: WorldState, AgentState, Node, DummyNode, AbstractNode, Config
 import ..Utils: pos_distance, get_real_adj
 using Graphs, SimpleWeightedGraphs
 using JSON
+using Accessors
 
 """
     create_world(fpath::String)
@@ -50,10 +51,13 @@ function create_world(config::Config)
 
     graph_map = SimpleWeightedDiGraph(sources, destinations, weights)
 
-    # TODO: This is getting messy with adj needing paths to generate. Sticky circular dependency
     world_state = WorldState(nodes, n_nodes, graph_map, obstacle_map, scale_factor)
     adj = get_real_adj(world_state)
-    world_state = WorldState(nodes, n_nodes, graph_map, obstacle_map, scale_factor, adj)
+    weight_limited_paths = generate_weight_limited_paths(adj, 20.0)
+
+    @reset world_state.adj=adj
+    @reset world_state.weight_limited_paths=weight_limited_paths
+
     return world_state
 end
 
@@ -63,10 +67,59 @@ end
 Return updated world state and reward allocated to agents
 """
 function world_step(world_state::WorldState, agents::Array{AgentState, 1})
-    updated_world_state = WorldState(world_state.nodes, world_state.n_nodes, world_state.map, world_state.obstacle_map, world_state.scale_factor, world_state.adj, world_state.paths, world_state.time + 1, world_state.done)    
+
+    nodes = copy(world_state.nodes)
+    for node in nodes
+        if node isa Node
+            node.values.idleness += 1.0
+            for agent in agents
+                if agent.graph_position isa Int64 && agent.graph_position == node.id
+                    node.values.idleness = 0.0
+                end
+            end
+        end
+    end
+   
+    @reset world_state.nodes=nodes    
+    @reset world_state.time=world_state.time+1
+
     rewards = zeros(Float64, length(agents))
 
-    return true, updated_world_state, rewards
+    return true, world_state, rewards
+end
+
+function generate_weight_limited_paths(adj::Matrix{Float64}, max_w::Float64)
+
+    n_nodes = size(adj)[1]
+    neighbours = [findall(!iszero, adj[i, :]) for i in 1:n_nodes]
+
+    # First axis is start node
+    # Second axis is paths from that start node
+    # Then each path is a vector of {Node ID, distance from start node}
+    paths_from_nodes::Vector{Vector{Vector{Tuple{Int64, Float64}}}} = [[] for _ in 1:n_nodes]
+
+    for node in 1:n_nodes
+        get_valid_paths!(node, adj, neighbours, [(node, 0.0)], max_w, paths_from_nodes[node])
+    end
+
+    return paths_from_nodes
+end
+
+function get_valid_paths!(node::Int64, adj::Matrix{Float64}, neighbours::Vector{Vector{Int64}}, path_so_far::Vector{Tuple{Int64, Float64}}, w::Float64, paths::Vector{Vector{Tuple{Int64, Float64}}})
+    
+    # Check if path must terminate here
+    step_weights = adj[node, neighbours[node]]
+    valid_next_steps = findall(n->(n<=w)&&(!iszero(n)), adj[node, :])
+    if length(valid_next_steps) == 0
+        push!(paths, path_so_far)
+    else
+        # Iterate on valid next steps
+        for s in valid_next_steps
+            step_w = ceil(adj[node, s])
+            remaining_w = w - step_w
+            get_valid_paths!(s, adj, neighbours, vcat(path_so_far, (s, path_so_far[end][2]+step_w)), remaining_w, paths)
+        end
+    end
 end
 
 """

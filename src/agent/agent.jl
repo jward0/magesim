@@ -1,6 +1,6 @@
 module Agent
 
-import ..Types: AgentState, WorldState, Position, AbstractAction, WaitAction, MoveToAction, StepTowardsAction, StringMessage
+import ..Types: AgentState, WorldState, Position, AbstractAction, WaitAction, MoveToAction, StepTowardsAction
 import ..AgentDynamics: calculate_next_position
 
 using DataStructures
@@ -60,7 +60,7 @@ world state, and generate messages to send to other agents
 function observe_world!(agent::AgentState, world::WorldState)
     agent.world_state_belief = world
 
-    enqueue!(agent.outbox, StringMessage(agent, nothing, string(agent.id)))
+    # enqueue!(agent.outbox, StringMessage(agent, nothing, string(agent.id)))
 end
 
 """
