@@ -79,10 +79,22 @@ end
 
 function update_communicated_weights_decay!(agent::AgentState, edge::Tuple{Int64, Int64}, w::Float64)
 
-    # decay stuff
+    decay = false
 
-    agent.values.effective_adj[edge...] = w
-    agent.values.effective_adj[reverse(edge)...] = w
+    # delta rule
+    if !decay
+        delta = 0.2
+        old_w = agent.values.effective_adj[edge...]
+        new_w = old_w + delta*(w - old_w)
+        agent.values.effective_adj[edge...] = new_w
+        agent.values.effective_adj[reverse(edge)...] = new_w
+    end
+
+    # decay rule
+    if decay
+        agent.values.effective_adj[edge...] = w
+        agent.values.effective_adj[reverse(edge)...] = w
+    end
 
 end
 
@@ -205,26 +217,34 @@ end
 
 function update_effective_adj_decay!(agent::AgentState, visited_edge::Tuple{Int64, Int64}, observed_w::Float64)
 
-    # ~~~ decay stuff
-    # decay_constant = lr
-    decay_constant = 0.975
-    mask = findall(iszero, agent.values.effective_adj)
+    decay = false
 
-    # relative_obstruction = (agent.values.effective_adj .- agent.values.original_adj_belief)
-    # relative_obstruction[findall(isnan, relative_obstruction)] .= 0.0
+    # ~~~ delta rule
+    if !decay
+        update_communicated_weights_decay!(agent, visited_edge, observed_w)    
+    end
+
+    # ~~~ decay rule
+    if decay
+        decay_constant = 0.975
+        mask = findall(iszero, agent.values.effective_adj)
+
+        # relative_obstruction = (agent.values.effective_adj .- agent.values.original_adj_belief)
+        # relative_obstruction[findall(isnan, relative_obstruction)] .= 0.0
 
 
-    # regressed_obstruction = (decay_constant .* (relative_obstruction .- mean(relative_obstruction))) .+ mean(relative_obstruction)
+        # regressed_obstruction = (decay_constant .* (relative_obstruction .- mean(relative_obstruction))) .+ mean(relative_obstruction)
 
-    # agent.values.effective_adj = regressed_obstruction .+ agent.values.original_adj_belief
+        # agent.values.effective_adj = regressed_obstruction .+ agent.values.original_adj_belief
 
-    mean_w = mean(agent.values.effective_adj[findall(!iszero, agent.values.effective_adj)])
-    agent.values.effective_adj = (decay_constant .* (agent.values.effective_adj .- mean_w)) .+ mean_w
+        mean_w = mean(agent.values.effective_adj[findall(!iszero, agent.values.effective_adj)])
+        agent.values.effective_adj = (decay_constant .* (agent.values.effective_adj .- mean_w)) .+ mean_w
 
-    agent.values.effective_adj[mask] .= 0.0
+        agent.values.effective_adj[mask] .= 0.0
 
-    agent.values.effective_adj[visited_edge...] = observed_w
-    agent.values.effective_adj[reverse(visited_edge)...] = observed_w
+        agent.values.effective_adj[visited_edge...] = observed_w
+        agent.values.effective_adj[reverse(visited_edge)...] = observed_w
+    end
 
 end
 
