@@ -1,6 +1,6 @@
 module AgentHandler
 
-import ..Types: AgentState, WorldState, Position, StepTowardsAction, Config
+import ..Types: AgentState, WorldState, Position, StepTowardsAction, Config, WaitAction
 import ..Agent: agent_step!, make_decisions!, observe_world!
 import ..MessagePasser: pass_messages!
 
@@ -29,6 +29,7 @@ function spawn_agents(world::WorldState, config::Config)
             config.check_los, 
             config.custom_config)
         observe_world!(agents[i], world)
+        enqueue!(agents[i].action_queue, WaitAction(i))
     end
 
     return agents
@@ -53,6 +54,12 @@ function step_agents!(agents::Array{AgentState, 1},
     if multithreaded
 
         Threads.@threads for agent in agents
+            observe_world!(agent, world)
+        end
+
+        pass_messages!(agents, world)
+
+        Threads.@threads for agent in agents
             if force_actions != false
                 empty!(agent.action_queue)
                 enqueue!(agent.action_queue, StepTowardsAction(force_actions[agent.id]))
@@ -60,15 +67,13 @@ function step_agents!(agents::Array{AgentState, 1},
                 make_decisions!(agent)
             end
         end
+
+        pass_messages!(agents, world)
     
         for agent in agents
             agent_step!(agent, world, [agent.position for agent in agents[1:agent.id-1]])
         end
     
-        Threads.@threads for agent in agents
-            observe_world!(agent, world)
-        end
-
     else
 
         for agent in agents
@@ -89,7 +94,7 @@ function step_agents!(agents::Array{AgentState, 1},
         end   
     end
 
-    pass_messages!(agents, world)
+    # pass_messages!(agents, world)
 
 end
 

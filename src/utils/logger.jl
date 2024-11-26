@@ -92,17 +92,21 @@ end
 Log WorldState data
 """
 function log(target::WorldState, logger::Logger, timestep::Int)
-    fpath = string(logger.log_directory, "world.csv") 
+
+    header_contents = ["node_$n" for n in [1:1:target.n_nodes...]]
+    idlenesses = [node.values.idleness for node in target.nodes if node isa Node]
+
+    fpath = string(logger.log_directory, "idleness.csv") 
 
     if !isfile(fpath)
-        header = "timestep"
+        header = make_line("timestep", string.(header_contents))
         open(fpath, "w") do file
             write(file, header)
             write(file,"\n")
         end
     end
 
-    csv_line = string(timestep)
+    csv_line = make_line(timestep, string.(idlenesses))
 
     open(fpath, "a") do file
         write(file, csv_line)

@@ -24,47 +24,61 @@ function main(args)
 
     for cf in configs
 
-        if !headless
-            speedup = min(cf.speedup, 10.0)
-        else
-            speedup = cf.speedup
-        end
+        for i in 1:5
 
-        world = create_world(cf)
-        agents = spawn_agents(world, cf)
-        ts = 1/speedup
-        actual_speedup = speedup
-        gtk_running = true
-        if cf.do_log
-            logger = Logger(cf)
-            log_frequency = 1
-        end
-
-        for step in 1:cf.timeout
-            t = @elapsed begin
-
-                step_agents!(agents, world, cf.multithreaded)
-                world_running, world, _ = world_step(world, agents)
-                
-                if !headless
-                    gtk_running = update_window!(world, agents, actual_speedup, builder)
-                end
-
-                if cf.do_log && step % log_frequency == 0 
-                    log(world, logger, step)
-                    log(agents, logger, step)
-                end
+            if !headless
+                speedup = min(cf.speedup, 10.0)
+            else
+                speedup = cf.speedup
             end
 
-            if !headless && (world_running && gtk_running)
-                sleep(max(ts-t, 0))
-                actual_speedup = 1/max(t, ts)
-            elseif !world_running
-                break
+            world = create_world(cf)
+
+            cf.agent_starts = mod.((cf.agent_starts .+ (i - 1)), size(world.adj)[1]) .+ 1
+
+            agents = spawn_agents(world, cf)
+            ts = 1/speedup
+            actual_speedup = speedup
+            gtk_running = true
+            if cf.do_log
+                logger = Logger(cf)
+                log_frequency = 1
             end
+
+            full_t = @elapsed begin
+
+                for step in 1:cf.timeout
+                    t = @elapsed begin
+
+                        step_agents!(agents, world, cf.multithreaded)
+                        world_running, world, _ = world_step(world, agents)
+                        
+                        if !headless
+                            gtk_running = update_window!(world, agents, actual_speedup, builder)
+                        end
+
+                        if cf.do_log && step % log_frequency == 0 
+                            log(world, logger, step)
+                            log(agents, logger, step)
+                        end
+                    end
+
+                    if !headless && (world_running && gtk_running)
+                        sleep(max(ts-t, 0))
+                        actual_speedup = 1/max(t, ts)
+                    elseif !world_running
+                        break
+                    end
+                end
+
+            end
+
+            sleep(max(1.1 - full_t, 0))
+            println(full_t)
+
+            stop_world()
         end
 
-        stop_world()
     end
 
     if !headless

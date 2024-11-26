@@ -53,7 +53,7 @@ struct Logger
 
     function Logger(config::Config)
 
-        log_directory = string("logs/", Dates.format(now(), "yyyymmdd_HH:MM:SS/"))
+        log_directory = string("logs/bin/", Dates.format(now(), "yyyymmdd_HH:MM:SS/"))
 
         if !isdir(log_directory)
             Base.Filesystem.mkpath(log_directory)
@@ -158,6 +158,7 @@ struct WorldState
     scale_factor::Float64
     adj::Matrix{Float64} # Adjacency matrix of only real nodes
     paths::Graphs.FloydWarshallState  # Has fields dists, parents (for back-to-front navigation)
+    # (Node, weight from start)
     weight_limited_paths::Vector{Vector{Vector{Tuple{Int64, Float64}}}}
     time::Real
     done::Bool
@@ -200,13 +201,16 @@ end
 # --- Agent types ---
 
 struct AgentValues
-    projected_node_visit_times::Vector{Queue{Float64}}
+    # Priority queue as we care about self-ordering
+    projected_node_visit_times::Vector{PriorityQueue{Float64}}
     node_idleness_log::Vector{Float64}
+    utility_horizon::Float64
 
     function AgentValues(n_nodes::Int64)
         new(
-            [Queue{Float64}() for _ in 1:n_nodes],
-            zeros(Float64, n_nodes)
+            [PriorityQueue{Float64, Float64}() for _ in 1:n_nodes],
+            zeros(Float64, n_nodes),
+            50.0
         )
     end
 end
@@ -241,6 +245,18 @@ struct IntendedPathMessage <: AbstractMessage
     message::Vector{Tuple{Int64, Float64}}
 
     function IntendedPathMessage(agent::AgentState, targets::Union{Array{Int64, 1}, Nothing}, message::Vector{Tuple{Int64, Float64}})
+
+        new(agent.id, targets, message)
+    end
+end
+
+struct ArrivedAtNodeMessage <: AbstractMessage
+    source::Int64
+    targets::Union{Array{Int64, 1}, Nothing}
+    # Node arrived at
+    message::Int64
+
+    function ArrivedAtNodeMessage(agent::AgentState, targets::Union{Array{Int64, 1}, Nothing}, message::Int64)
 
         new(agent.id, targets, message)
     end

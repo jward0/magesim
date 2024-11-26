@@ -53,7 +53,7 @@ function create_world(config::Config)
 
     world_state = WorldState(nodes, n_nodes, graph_map, obstacle_map, scale_factor)
     adj = get_real_adj(world_state)
-    weight_limited_paths = generate_weight_limited_paths(adj, 20.0)
+    weight_limited_paths = generate_weight_limited_paths(adj, 50.0)
 
     @reset world_state.adj=adj
     @reset world_state.weight_limited_paths=weight_limited_paths
@@ -89,6 +89,8 @@ function world_step(world_state::WorldState, agents::Array{AgentState, 1})
 end
 
 function generate_weight_limited_paths(adj::Matrix{Float64}, max_w::Float64)
+
+    # Currently just brute-forces it. There will be a better way
 
     n_nodes = size(adj)[1]
     neighbours = [findall(!iszero, adj[i, :]) for i in 1:n_nodes]
