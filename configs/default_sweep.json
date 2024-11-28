@@ -1,4 +1,4 @@
 {
-	"comm_range": [5, 10],
-    "check_los": [true, false]
+	"world": ["DIAG_floor1"],
+	"n_agents": [1]
 }
