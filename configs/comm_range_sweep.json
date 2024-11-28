@@ -1,6 +1,5 @@
 {
-    "world": ["DIAG_floor1"],
-	"n_agents": [1, 2, 4, 6, 8, 12],
-    "comm_range": [-1, 2.5, 5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100],
-    "check_los": [true, false]
+    "comm_range": [0, 2.5, 5, 10, 20, 30, 40, 9999],
+    "check_los": [true, false],
+    "n_agents": [2, 4, 6, 8, 12]
 }

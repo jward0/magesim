@@ -1,13 +1,13 @@
 {
-	"world": "cumberland",
+	"world": "DIAG_floor1",
 	"headless": true,
-	"n_agents": 6,
-	"agent_starts": [4, 13, 18, 20, 28, 33],
+	"n_agents": 4,
+	"agent_starts": [4, 13, 18, 20],
 	"speedup": 10000,
 	"timeout": 10000,
 	"multithreaded": true,
 	"do_log": true,
-	"comm_range": 40,
+	"comm_range": 99999,
 	"check_los": false,
 	"custom_config": false
 }
