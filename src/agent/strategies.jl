@@ -32,33 +32,6 @@ Does SPNS
 function make_decisions_SPNS!(agent::AgentState)
 
     message_received = false
-    
-    # input[0] is data (shape=n_nodesx2 (distance, idleness))
-    # input[1] is normalised weighted world adjacency matrix (shape=n_nodesxn_nodes)
-
-    # Check messages every timestep (necessary to avoid idleness info going stale)
-    # while !isempty(agent.inbox)
-    #     message = dequeue!(agent.inbox)
-    #     agent.values.n_messages += 1
-    #     message_received = true
-    #     if message isa IdlenessLogMessage
-    #         # Min pool observed idleness with idleness from message
-    #         agent.values.idleness_log = min.(agent.values.idleness_log, message.message)
-    #     elseif message isa ArrivedAtNodeMessageSPNS
-    #         agent.values.idleness_log[message.message] = 0.0
-    #     elseif message isa PriorityMessage
-    #         agent.values.priority_log[message.source, :] = message.message
-    #         agent.values.other_targets_freshness[message.source] = 0.0
-    #     elseif message isa PosMessage
-    #         agent.values.agent_dists_log[message.source] = pos_distance(message.message, agent.position)
-    #     elseif message isa GoingToMessage
-    #         agent.values.other_targets[message.source] = message.message
-    #         agent.values.other_targets_freshness[message.source] = 0.0
-    #     elseif message isa ObservedWeightMessage
-    #         ((src, dst), (ts, w)) = message.message
-    #         update_weight_logs!(agent, src, dst, ts, w)
-    #     end
-    # end
 
     if isempty(agent.action_queue)
 
@@ -74,8 +47,8 @@ function make_decisions_SPNS!(agent::AgentState)
 
         model_in = [node_values, adjacency_matrix]
 
-        model_out = vec(forward_nn(model_in))
-        # model_out = vec(minimal_nn(node_values))
+        # model_out = vec(forward_nn(model_in))
+        model_out = vec(minimal_nn(node_values))
 
         priorities = model_out
         final_priorities = priorities
@@ -217,214 +190,6 @@ function c1(input)
     return 0.15660883 * input
 end
 
-
-# # Candidate o
-# function sd_1(input)
-
-#     out = zeros(Float64, (size(input)[1], 4))
-
-#     for i in 1:size(input)[1]
-#         d = input[i, :]
-#         out[i, 1] = -0.62800371 * d[1] +  2.30403945 * d[2]
-#         out[i, 2] = -1.60534067 * d[1] + -0.52440723 * d[2]
-#         out[i, 3] = -2.42793000 * d[1] +  0.42870511 * d[2]
-#         out[i, 4] = -0.49595445 * d[1] + -1.04687925 * d[2]
-#     end
-
-#     return leakyrelu(out, 0.3)
-# end
-
-# function sd_out(input)
-
-#     out = zeros(Float64, (size(input)[1]))
-
-#     for i in 1:size(input)[1]
-#         d = input[i, :]
-#         out[i] = -1.73357073 * d[1] + -0.10359191 * d[2] + -1.89956198 * d[3] + 1.78730424 * d[4]
-#     end
-
-#     return leakyrelu(out, 0.3)
-# end
-
-# function nd_1(input)
-
-#     out = zeros(Float64, (size(input)[1], size(input)[2], 6))
-
-#     for i in 1:size(input)[1]
-#         for j in 1:size(input)[2]
-#             d = input[i, j, :]
-#             out[i, j, 1] =  0.95527721 * d[1] + -0.8583464  * d[2] +  0.57678431 * d[3]
-#             out[i, j, 2] =  0.11241918 * d[1] + -0.99337831 * d[2] +  0.27593356 * d[3]
-#             out[i, j, 3] =  0.57387171 * d[1] + -0.6692589  * d[2] + -0.20614243 * d[3]
-#             out[i, j, 4] =  0.23692014 * d[1] + -0.30380452 * d[2] + -0.85232541 * d[3]
-#             out[i, j, 5] = -0.37189648 * d[1] +  0.13895276 * d[2] + -0.62144221 * d[3]
-#             out[i, j, 6] = -0.19668352 * d[1] + -0.36074256 * d[2] +  0.238573   * d[3]
-#         end
-#     end
-
-#     return leakyrelu(out, 0.3)
-# end
-
-# function nd_out(input)
-
-#     out = zeros(Float64, (size(input)[1], size(input)[2]))
-
-#     for i in 1:size(input)[1]
-#         for j in 1:size(input)[2]
-#             d = input[i, j, :]
-#             out[i, j] = 1.57002399 * d[1] + -1.27832158 * d[2] + -1.1481761 * d[3] + 1.86049738 * d[4] + 2.8096146 * d[5] + -1.81721406 * d[6]
-#         end
-#     end
-
-#     return leakyrelu(out, 0.3)
-# end
-
-# function c0(input)
-#     return 1.10501259 * input
-# end
-
-# function c1(input)
-#     return -0.16592435 * input
-# end
-
-# # Candidate n
-# function sd_1(input)
-
-#     out = zeros(Float64, (size(input)[1], 4))
-
-#     for i in 1:size(input)[1]
-#         d = input[i, :]
-#         out[i, 1] = -0.04033908 * d[1] + -0.68590098 * d[2]
-#         out[i, 2] = -0.88446765 * d[1] +  0.98786975 * d[2]
-#         out[i, 3] =  0.38907481 * d[1] + -1.77728487 * d[2]
-#         out[i, 4] = -0.52117626 * d[1] + -0.78331154 * d[2]
-#     end
-
-#     return leakyrelu(out, 0.3)
-# end
-
-# function sd_out(input)
-
-#     out = zeros(Float64, (size(input)[1]))
-
-#     for i in 1:size(input)[1]
-#         d = input[i, :]
-#         out[i] = -0.53540899 * d[1] + -2.08833101 * d[2] + 1.49513798 * d[3] + -1.3239626 * d[4]
-#     end
-
-#     return leakyrelu(out, 0.3)
-# end
-
-# function nd_1(input)
-
-#     out = zeros(Float64, (size(input)[1], size(input)[2], 6))
-
-#     for i in 1:size(input)[1]
-#         for j in 1:size(input)[2]
-#             d = input[i, j, :]
-#             out[i, j, 1] =  0.67676192 * d[1] + -0.87981719 * d[2] +  0.20116242 * d[3]
-#             out[i, j, 2] =  0.12472499 * d[1] + -1.11442924 * d[2] + -0.53858979 * d[3]
-#             out[i, j, 3] =  0.58852793 * d[1] + -0.48133891 * d[2] +  0.18444586 * d[3]
-#             out[i, j, 4] = -0.5734967  * d[1] +  0.40431928 * d[2] +  0.66635934 * d[3]
-#             out[i, j, 5] =  0.90407176 * d[1] +  0.05565699 * d[2] + -0.23024959 * d[3]
-#             out[i, j, 6] =  0.42529013 * d[1] + -0.43265607 * d[2] +  0.3225984  * d[3]
-#         end
-#     end
-
-#     return leakyrelu(out, 0.3)
-# end
-
-# function nd_out(input)
-
-#     out = zeros(Float64, (size(input)[1], size(input)[2]))
-
-#     for i in 1:size(input)[1]
-#         for j in 1:size(input)[2]
-#             d = input[i, j, :]
-#             out[i, j] = 0.65148517 * d[1] + 1.84472842 * d[2] + -0.30575367 * d[3] + 0.19298245 * d[4] + -2.7081306 * d[5] + 1.49300997 * d[6]
-#         end
-#     end
-
-#     return leakyrelu(out, 0.3)
-# end
-
-# function c0(input)
-#     return 1.28173339 * input
-# end
-
-# function c1(input)
-#     return 0.22143036 * input
-# end
-
-# # Candidate g
-# function sd_1(input)
-
-#     out = zeros(Float64, (size(input)[1], 4))
-
-#     for i in 1:size(input)[1]
-#         d = input[i, :]
-#         out[i, 1] =  0.39542921 * d[1] + -0.65675830 * d[2]
-#         out[i, 2] =  1.04956550 * d[1] + -2.41169670 * d[2]
-#         out[i, 3] = -1.76400600 * d[1] + -1.35503092 * d[2]
-#         out[i, 4] =  0.35702324 * d[1] + -0.21459921 * d[2]
-#     end
-
-#     return leakyrelu(out, 0.3)
-# end
-
-# function sd_out(input)
-
-#     out = zeros(Float64, (size(input)[1]))
-
-#     for i in 1:size(input)[1]
-#         d = input[i, :]
-#         out[i] = 1.23378153 * d[1] + -1.74570142 * d[2] + 1.67926374 * d[3] + 1.03526079 * d[4]
-#     end
-
-#     return leakyrelu(out, 0.3)
-# end
-
-# function nd_1(input)
-
-#     out = zeros(Float64, (size(input)[1], size(input)[2], 6))
-
-#     for i in 1:size(input)[1]
-#         for j in 1:size(input)[2]
-#             d = input[i, j, :]
-#             out[i, j, 1] =  0.01888764 * d[1] + -0.45915342 * d[2] + -0.47627992 * d[3]
-#             out[i, j, 2] =  0.37894088 * d[1] +  0.84592537 * d[2] +  0.03730955 * d[3]
-#             out[i, j, 3] = -0.47623729 * d[1] + -0.48666733 * d[2] +  0.58645635 * d[3]
-#             out[i, j, 4] = -0.26577757 * d[1] + -0.49801225 * d[2] + -0.00811519 * d[3]
-#             out[i, j, 5] =  0.57938169 * d[1] +  1.04516341 * d[2] + -0.19110703 * d[3]
-#             out[i, j, 6] = -0.13873973 * d[1] + -0.50178453 * d[2] + -0.94114514 * d[3]
-#         end
-#     end
-
-#     return leakyrelu(out, 0.3)
-# end
-
-# function nd_out(input)
-
-#     out = zeros(Float64, (size(input)[1], size(input)[2]))
-
-#     for i in 1:size(input)[1]
-#         for j in 1:size(input)[2]
-#             d = input[i, j, :]
-#             out[i, j] = -1.12949772 * d[1] + 1.03677392 * d[2] + -1.21275977 * d[3] + -0.05812893 * d[4] + -1.04156908 * d[5] + 0.77585069 * d[6]
-#         end
-#     end
-
-#     return leakyrelu(out, 0.3)
-# end
-
-# function c0(input)
-#     return -0.62272069 * input
-# end
-
-# function c1(input)
-#     return -0.04584406 * input
-# end
-
 function do_psm(agent, self_priorities, adj)
 
     # Currently NOT set up to handle non-infinite communication ranges
@@ -509,21 +274,6 @@ does SEBS
 """
 function make_decisions_SEBS!(agent::AgentState)
 
-    # Read ArrivedAtNodeMessages to update idleness and intention logs
-    # while !isempty(agent.inbox)
-    #     message = dequeue!(agent.inbox)
-    #     agent.values.n_messages += 1
-    #     if message isa ArrivedAtNodeMessageSEBS
-    #         n = message.message[1]
-    #         agent.values.last_terminal_idlenesses[n] = agent.values.idleness_log[n]
-    #         agent.values.idleness_log[n] = 0.0
-    #         agent.values.intention_log[message.source] = message.message[2]
-    #     elseif message isa ObservedWeightMessage
-    #         ((src, dst), (ts, w)) = message.message
-    #         update_weight_logs!(agent, src, dst, ts, w)
-    #     end
-    # end
-
     # If no action in progress, select node to move towards
     if isempty(agent.action_queue)
 
@@ -580,4 +330,88 @@ function calculate_intention_weight(n_intentions::Int64, agent::AgentState)
 
     n_agents = agent.values.n_agents_belief
     return 2^(n_agents - n_intentions)/(2^n_agents - 1)
+end
+
+"""
+    make_decisions_ER!(agent::AgentState)
+
+does ER
+"""
+function make_decisions_ER!(agent::AgentState)
+
+    # If no action in progress, select node to move towards
+    if isempty(agent.action_queue)
+
+        t = agent.world_state_belief.time
+
+        # Trim visit intention queues to current time
+
+        for q in agent.values.projected_node_visit_times
+            while !isempty(q)
+                if peek(q)[1] < t
+                    dequeue!(q)
+                else
+                    break
+                end
+            end
+        end
+
+        neighbours = get_neighbours(agent.graph_position, agent.world_state_belief, true)
+
+        if length(neighbours) == 1
+            enqueue!(agent.outbox, ArrivedAtNodeMessageSPNS(agent, nothing, neighbours[1]))
+            enqueue!(agent.outbox, 
+                GoingToMessageER(agent, 
+                                 nothing, 
+                                 (neighbours[1], t + ceil(agent.world_state_belief.adj[agent.graph_position, neighbours[1]]))
+                                )
+            )
+            enqueue!(agent.action_queue, MoveToAction(neighbours[1]))
+        elseif !isa(agent.graph_position, Int64)
+            # Catch the potential problem of an agent needing a new action
+            # while midway between two nodes (not covered by algo) - 
+            # solution to this is just to pick one
+            enqueue!(agent.action_queue, MoveToAction(neighbours[1]))
+        else
+            # Do ER
+            utilities = map(n -> er_utility(n, agent), neighbours)
+            target = neighbours[argmax(utilities)]
+
+            enqueue!(agent.action_queue, MoveToAction(target))
+            enqueue!(agent.outbox, ArrivedAtNodeMessageSPNS(agent, nothing, target))
+            enqueue!(agent.outbox, 
+                GoingToMessageER(agent, 
+                                nothing, 
+                                (target, t + ceil(agent.world_state_belief.adj[agent.graph_position, target]))
+                                )
+            )
+        end
+
+        if agent.graph_position isa Int64
+            agent.values.departed_time = agent.world_state_belief.time
+        end
+    end
+    
+end
+
+function er_utility(node::Int64, agent::AgentState)
+
+    idleness = agent.values.idleness_log[node]
+    distance = agent.world_state_belief.adj[agent.graph_position, node]
+    expected_visits = agent.values.projected_node_visit_times[node]
+    time = agent.world_state_belief.time
+
+    t_next = time + distance
+    t_expected = time - idleness
+
+    vt = [v[1] for v in expected_visits]
+
+    for t in vt
+        if t >= time
+            t_expected = t
+            break
+        end
+    end
+
+    return abs(t_next - t_expected) / distance
 end

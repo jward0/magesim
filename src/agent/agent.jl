@@ -1,6 +1,6 @@
 module Agent
 
-import ..Types: AgentState, WorldState, Position, AbstractAction, WaitAction, MoveToAction, StepTowardsAction, ArrivedAtNodeMessageSEBS, ArrivedAtNodeMessageSPNS, ObservedWeightMessage, IdlenessLogMessage, PriorityMessage, PosMessage, GoingToMessage
+import ..Types: AgentState, WorldState, Position, AbstractAction, WaitAction, MoveToAction, StepTowardsAction, ArrivedAtNodeMessageSEBS, ArrivedAtNodeMessageSPNS, GoingToMessageER, ObservedWeightMessage, IdlenessLogMessage, PriorityMessage, PosMessage, GoingToMessage
 import ..AgentDynamics: calculate_next_position
 import ..Utils: get_neighbours, pos_distance, get_distances
 # import ..Strategies: make_decisions_SPNS!, make_decisions_SEBS!
@@ -226,12 +226,12 @@ function update_effective_adj_decay!(agent::AgentState, visited_edge::Tuple{Int6
 
     # ~~~ decay rule
     if decay
+
         decay_constant = 0.975
         mask = findall(iszero, agent.values.effective_adj)
 
         # relative_obstruction = (agent.values.effective_adj .- agent.values.original_adj_belief)
         # relative_obstruction[findall(isnan, relative_obstruction)] .= 0.0
-
 
         # regressed_obstruction = (decay_constant .* (relative_obstruction .- mean(relative_obstruction))) .+ mean(relative_obstruction)
 
@@ -244,6 +244,7 @@ function update_effective_adj_decay!(agent::AgentState, visited_edge::Tuple{Int6
 
         agent.values.effective_adj[visited_edge...] = observed_w
         agent.values.effective_adj[reverse(visited_edge)...] = observed_w
+
     end
 
 end
@@ -275,7 +276,11 @@ function observe_world!(agent::AgentState, world::WorldState)
             agent.values.idleness_log[message.message] = 0.0
         elseif message isa GoingToMessage
             agent.values.other_targets[message.source] = message.message
-            agent.values.other_targets_freshness[message.source] = 0.0
+        elseif message isa GoingToMessageER
+            target = message.message[1]
+            arrival_time = message.message[2]
+            agent.values.intention_log[message.source] = target
+            agent.values.projected_node_visit_times[target][arrival_time] = arrival_time
         elseif message isa ObservedWeightMessage
             ((src, dst), (ts, w)) = message.message
             # update_weight_logs!(agent, src, dst, ts, w)
@@ -323,8 +328,6 @@ function observe_world!(agent::AgentState, world::WorldState)
         # update_effective_adj!(agent, t - agent.values.departed_time)
     end
 
-    agent.values.other_targets_freshness .+= 1.0
-
 end
 
 function make_decisions!(agent::AgentState)
@@ -334,7 +337,6 @@ function make_decisions!(agent::AgentState)
     # new_effective_adj = agent.world_state_belief.adj ./ tp
     # new_effective_adj[isnan.(new_effective_adj)] .= 0.0
 
-    
     # otherwise
     new_effective_adj = agent.values.effective_adj
 
@@ -346,6 +348,8 @@ function make_decisions!(agent::AgentState)
         make_decisions_SEBS!(agent)
     elseif agent.values.strategy == "SPNS"
         make_decisions_SPNS!(agent)
+    elseif agent.values.strategy == "ER"
+        make_decisions_ER!(agent)
     end
 end
 

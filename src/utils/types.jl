@@ -38,6 +38,7 @@ mutable struct Config
     n_agents::Int64
     agent_starts::Array{Int64, 1}
     comm_range::Float64
+    comm_failure::Float64
     check_los::Bool
     # Run configs
     headless::Bool
@@ -205,6 +206,7 @@ end
 # --- Agent types ---
 
 mutable struct AgentValues
+    # There's a LOT of junk in here that I don't use any more
     priority_log::Array{Float64, 2}
     priority_weights::Array{Float64, 1}
     other_targets::Array{Int64, 1}
@@ -218,7 +220,6 @@ mutable struct AgentValues
     last_last_visited::Int64
     n_messages::Int64
     current_target::Int64
-    other_targets_freshness::Array{Float64, 1}
     # Keys are (src, dst), values are [time, observed weight]
     # observed_weights_log must be populated such that the values are each internally sorted
     observed_weights_log::Dict{Tuple{Int64, Int64}, Vector{Vector{Float64}}}
@@ -230,10 +231,14 @@ mutable struct AgentValues
     # SEBS bits
     intention_log::Array{Int64, 1}
     sebs_gains::Tuple{Float64, Float64}
+    # ER bits
+    projected_node_visit_times::Vector{PriorityQueue{Float64}}
     # Auto-tuning
     alpha::Float64
     original_dr::Float64
     original_adj_belief::Matrix{Float64}
+    # Comm failure
+    comm_failure::Float64
 
     function AgentValues(n_agents::Int64, n_nodes::Int64, custom_config::UserConfig)
         new(ones(Float64, (n_agents, n_nodes)) .* -9999, 
@@ -249,17 +254,18 @@ mutable struct AgentValues
             0,
             0,
             0,
-            zeros(Float64, n_agents),
             Dict(),
             Dict(),
             zeros(Float64, (n_nodes, n_nodes)),
             0,
-            "SEBS",
+            "ER",
             zeros(Int64, n_agents),
             (0.1, 100.0),
+            [PriorityQueue{Float64, Float64}() for _ in 1:n_nodes],
             -1.0,
             0.0,
-            zeros(Float64, (n_nodes, n_nodes)))
+            zeros(Float64, (n_nodes, n_nodes)),
+            0.0)
 
     end
 end
@@ -381,6 +387,19 @@ struct ArrivedAtNodeMessageSEBS <: AbstractMessage
         new(agent.id, targets, message)
     end
 end
+
+struct GoingToMessageER <: AbstractMessage
+    source::Int64
+    targets::Union{Array{Int64, 1}, Nothing}
+    # Target, estimated arrival time
+    message::Tuple{Int64, Float64}
+
+    function GoingToMessageER(agent::AgentState, targets::Union{Array{Int64, 1}, Nothing}, message::Tuple{Int64, Float64})
+
+        new(agent.id, targets, message)
+    end
+end
+
 
 struct GoingToMessage <: AbstractMessage
     source::Int64

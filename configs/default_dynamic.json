@@ -1,17 +1,16 @@
 {
-	"world": "example",
+	"world": "cumberland",
 	"headless": true,
-	"n_agents": 2,
-	"agent_starts": [5, 12],
+	"n_agents": 6,
+	"agent_starts": [1, 6, 11, 16, 21, 24],
 	"speedup": 10000,
-	"timeout": 2500,
+	"timeout": 3600,
 	"multithreaded": true,
 	"do_log": true,
-	"comm_range": 400,
+	"comm_range": 9999,
+	"comm_failure": 0.0,
 	"check_los": false,
 	"custom_config": {
-		"source": "load",
-		"name": "dynamic",
-		"args": [0.00, 0.00, 0.2]
+		"source": "none"
 	}
 }

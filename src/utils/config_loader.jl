@@ -135,6 +135,7 @@ function process_config_dict(config_dict::Dict{String, Any})
     multithreaded::Bool = config_dict["multithreaded"]
     do_log::Bool = config_dict["do_log"]
     comm_range::Float64 = config_dict["comm_range"]
+    comm_failure::Float64 = config_dict["comm_failure"]
     check_los::Bool = config_dict["check_los"]
 
     # Custom config loading
@@ -148,6 +149,7 @@ function process_config_dict(config_dict::Dict{String, Any})
         n_agents,
         agent_starts,
         comm_range,
+        comm_failure,
         check_los,
         headless,
         speedup,
