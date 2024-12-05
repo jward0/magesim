@@ -79,7 +79,7 @@ end
 
 function update_communicated_weights_decay!(agent::AgentState, edge::Tuple{Int64, Int64}, w::Float64)
 
-    decay = false
+    decay = true
 
     # delta rule
     if !decay
@@ -217,7 +217,7 @@ end
 
 function update_effective_adj_decay!(agent::AgentState, visited_edge::Tuple{Int64, Int64}, observed_w::Float64)
 
-    decay = false
+    decay = true
 
     # ~~~ delta rule
     if !decay

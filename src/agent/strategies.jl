@@ -39,9 +39,13 @@ function make_decisions_SPNS!(agent::AgentState)
 
         adjacency_matrix = agent.world_state_belief.adj / c
 
-        distances = dijkstra_shortest_paths(SimpleWeightedDiGraph(adjacency_matrix), agent.graph_position).dists
+        unnormalised_dists = dijkstra_shortest_paths(SimpleWeightedDiGraph(agent.world_state_belief.adj), agent.graph_position).dists
         # distances = get_distances(agent.graph_position, agent.position, agent.world_state_belief)
         idlenesses = agent.values.idleness_log
+
+        # Original
+        """
+        distances = dijkstra_shortest_paths(SimpleWeightedDiGraph(adjacency_matrix), agent.graph_position).dists
 
         node_values = hcat(idlenesses/maximum(idlenesses), distances/maximum(distances))
 
@@ -52,8 +56,28 @@ function make_decisions_SPNS!(agent::AgentState)
 
         priorities = model_out
         final_priorities = priorities
+        """
+
+        # Greedy-avoidant hijack
+        # final_priorities = idlenesses
+
+        # SH-AUM hijack
+        shaum_gains = (idlenesses .+ unnormalised_dists) ./ unnormalised_dists
+        shaum_gains[agent.graph_position] = 0
+        ns = get_neighbours(agent.graph_position, agent.world_state_belief, true)
+
+        # push!(agent.values.max_gain_logs[agent.graph_position], mean(shaum_gains[ns]))
+
+        max_d = maximum(unnormalised_dists[ns])
+
+        # expected_gains = mean.(agent.values.max_gain_logs)
+        # expected_gains[isnan.(expected_gains)] .= mean(shaum_gains[ns])
+
+        shaum_utilities = (shaum_gains .* unnormalised_dists)  .+ (mean(shaum_gains[ns]) .* (max_d .- unnormalised_dists))
+        final_priorities = shaum_utilities
 
         target = do_sebs_style(agent, final_priorities)
+
 
         enqueue!(agent.action_queue, MoveToAction(target))
 

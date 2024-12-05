@@ -233,6 +233,8 @@ mutable struct AgentValues
     sebs_gains::Tuple{Float64, Float64}
     # ER bits
     projected_node_visit_times::Vector{PriorityQueue{Float64}}
+    # SH-AUM bits
+    max_gain_logs::Vector{Vector{Float64}}
     # Auto-tuning
     alpha::Float64
     original_dr::Float64
@@ -258,10 +260,11 @@ mutable struct AgentValues
             Dict(),
             zeros(Float64, (n_nodes, n_nodes)),
             0,
-            "ER",
+            "SPNS",
             zeros(Int64, n_agents),
             (0.1, 100.0),
             [PriorityQueue{Float64, Float64}() for _ in 1:n_nodes],
+            [[] for _ in 1:n_nodes],
             -1.0,
             0.0,
             zeros(Float64, (n_nodes, n_nodes)),
