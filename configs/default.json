@@ -6,7 +6,7 @@
 	"speedup": 5,
 	"timeout": 1000,
 	"multithreaded": true,
-	"do_log": true,
+	"do_log": false,
 	"comm_range": 40,
 	"check_los": false,
 	"custom_config": false

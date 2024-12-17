@@ -44,7 +44,7 @@ function make_decisions_SPNS!(agent::AgentState)
         idlenesses = agent.values.idleness_log
 
         # Original
-        """
+        
         distances = dijkstra_shortest_paths(SimpleWeightedDiGraph(adjacency_matrix), agent.graph_position).dists
 
         node_values = hcat(idlenesses/maximum(idlenesses), distances/maximum(distances))
@@ -56,25 +56,45 @@ function make_decisions_SPNS!(agent::AgentState)
 
         priorities = model_out
         final_priorities = priorities
-        """
+        
 
         # Greedy-avoidant hijack
         # final_priorities = idlenesses
 
         # SH-AUM hijack
-        shaum_gains = (idlenesses .+ unnormalised_dists) ./ unnormalised_dists
-        shaum_gains[agent.graph_position] = 0
-        ns = get_neighbours(agent.graph_position, agent.world_state_belief, true)
+
+        # point_to_point_gains::Matrix{Float64} = (agent.world_state_belief.adj .+ transpose(repeat(idlenesses, inner=[1, length(idlenesses)]))) ./ agent.world_state_belief.adj
+
+        # point_to_point_gains[isinf.(point_to_point_gains)] .= 0.0
+        # point_to_point_gains[isnan.(point_to_point_gains)] .= 0.0
+
+        # shaum_gains = (idlenesses .+ unnormalised_dists) ./ unnormalised_dists
+        # shaum_gains[agent.graph_position] = 0
+        # ns = get_neighbours(agent.graph_position, agent.world_state_belief, true)
 
         # push!(agent.values.max_gain_logs[agent.graph_position], mean(shaum_gains[ns]))
 
-        max_d = maximum(unnormalised_dists[ns])
+        # max_d = maximum(unnormalised_dists[ns])
 
         # expected_gains = mean.(agent.values.max_gain_logs)
         # expected_gains[isnan.(expected_gains)] .= mean(shaum_gains[ns])
 
-        shaum_utilities = (shaum_gains .* unnormalised_dists)  .+ (mean(shaum_gains[ns]) .* (max_d .- unnormalised_dists))
-        final_priorities = shaum_utilities
+        # node_gains = [mean(point_to_point_gains[i, :][point_to_point_gains[i, :] .!= 0.0]) for i in 1:length(idlenesses)]
+
+        # graph_gain = mean(node_gains)
+
+        # # println("###############################")
+        # # println(node_gains[ns] .* (max_d .- unnormalised_dists)[ns])
+        # # println(mean(expected_gains) .* (max_d .- unnormalised_dists)[ns])
+        # # println(mean(shaum_gains[ns]) .* (max_d .- unnormalised_dists)[ns])
+        # # println("----------------------------------")
+        # # println(shaum_gains[ns] .* unnormalised_dists[ns])
+
+        # # shaum_utilities = shaum_gains .* unnormalised_dists
+        # # shaum_utilities = (shaum_gains .* unnormalised_dists)  .+ (mean(node_gains) .* (max_d .- unnormalised_dists))
+        # shaum_utilities = (shaum_gains .* unnormalised_dists)  .+ (mean(shaum_gains[ns]) .* (max_d .- unnormalised_dists))
+        # final_priorities = shaum_utilities
+        # END SH-AUM HIJACK
 
         target = do_sebs_style(agent, final_priorities)
 

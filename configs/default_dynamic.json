@@ -4,7 +4,7 @@
 	"n_agents": 6,
 	"agent_starts": [1, 6, 11, 16, 21, 24],
 	"speedup": 10000,
-	"timeout": 3600,
+	"timeout": 10000,
 	"multithreaded": true,
 	"do_log": true,
 	"comm_range": 9999,
