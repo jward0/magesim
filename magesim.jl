@@ -7,6 +7,9 @@ import .WorldRenderer: create_window, update_window!, close_window
 import .AgentHandler: spawn_agents, step_agents!
 import .ConfigLoader: load_configs
 
+# using Profile
+# using ProfileView
+
 function main(args)
 
     if length(args) in [1, 2]
@@ -88,3 +91,5 @@ function main(args)
 end
 
 main(ARGS)
+
+# ProfileView.view()
