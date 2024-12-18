@@ -201,16 +201,18 @@ end
 # --- Agent types ---
 
 struct AgentValues
+    other_agent_announced_paths::Vector{Vector{Tuple{Int64, Float64}}}
     # Priority queue as we care about self-ordering
     projected_node_visit_times::Vector{PriorityQueue{Float64}}
     node_idleness_log::Vector{Float64}
     utility_horizon::Float64
 
-    function AgentValues(n_nodes::Int64)
+    function AgentValues(n_agents::Int64, n_nodes::Int64)
         new(
+            [[] for _ in 1:n_agents],
             [PriorityQueue{Float64, Float64}() for _ in 1:n_nodes],
             zeros(Float64, n_nodes),
-            50.0
+            60.0
         )
     end
 end
@@ -231,7 +233,7 @@ mutable struct AgentState
 
     function AgentState(id::Int64, start_node_idx::Int64, start_node_pos::Position, n_agents::Int64, n_nodes::Int64, comm_range::Float64, check_los::Bool, custom_config::UserConfig)
 
-        values = AgentValues(n_nodes)
+        values = AgentValues(n_agents, n_nodes)
         new(id, start_node_pos, values, Queue{AbstractAction}(), start_node_idx, 1.0, comm_range, check_los, 10.0, Queue{AbstractMessage}(), Queue{AbstractMessage}(), nothing)    
     end
 end

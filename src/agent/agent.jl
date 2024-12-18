@@ -66,10 +66,13 @@ function observe_world!(agent::AgentState, world::WorldState)
         message = dequeue!(agent.inbox)
 
         if message isa IntendedPathMessage
-            for v in message.message
+            n = message.source
+            # Log intended paths
+            agent.values.other_agent_announced_paths[message.source] = message.message
+            # for v in message.message
                 # Insert projected visit time into relevant priority queue, with priority equal to projected visit time
-                agent.values.projected_node_visit_times[v[1]][v[2]] = v[2]
-            end
+                # agent.values.projected_node_visit_times[v[1]][v[2]] = v[2]                
+            # end
         elseif message isa ArrivedAtNodeMessage
             agent.values.node_idleness_log[message.message] = 1.0
         end
@@ -91,12 +94,26 @@ internal values
 """
 function make_decisions!(agent::AgentState)
 
+    # Assemble projected visit times from announced paths
+    projected_node_visit_times::Vector{Vector{Float64}} = [[] for _ in 1:agent.world_state_belief.n_nodes]
+
+    for path in agent.values.other_agent_announced_paths
+        for n in path
+            push!(projected_node_visit_times[n[1]], n[2]) 
+        end
+    end
+
+    sort!.(projected_node_visit_times)
+
     # Trim projected visits to current timestep
 
-    for q in agent.values.projected_node_visit_times
+    # TODO: this can be done better
+    for q in projected_node_visit_times # agent.values.projected_node_visit_times
         while !isempty(q)
-            if peek(q)[1] < agent.world_state_belief.time
-                dequeue!(q)
+            if q[1] < agent.world_state_belief.time
+                popfirst!(q)
+            # if peek(q)[1] < agent.world_state_belief.time
+                # dequeue!(q)
             else
                 break
             end
@@ -105,22 +122,29 @@ function make_decisions!(agent::AgentState)
 
     if isempty(agent.action_queue)
         possible_paths = agent.world_state_belief.weight_limited_paths[agent.graph_position]
-        path_utilities = [calculate_path_utility(agent.world_state_belief.time, agent.values.utility_horizon, agent.values.node_idleness_log, p, agent.values.projected_node_visit_times) for p in possible_paths]
+        # path_utilities = [calculate_path_utility(agent.world_state_belief.time, agent.values.utility_horizon, agent.values.node_idleness_log, p, agent.values.projected_node_visit_times) for p in possible_paths]
+        path_utilities = [calculate_path_utility(agent.world_state_belief.time, agent.values.utility_horizon, agent.values.node_idleness_log, p, projected_node_visit_times) for p in possible_paths]
         selected_path = possible_paths[argmax(path_utilities)]
         adjusted_path = deepcopy(selected_path)
-        for i in 1:length(adjusted_path)
+        # Override to make receding horizon
+        # for i in 1:length(adjusted_path)
+        for i in 2:2
             adjusted_path[i] = adjusted_path[i] .+ (0.0, agent.world_state_belief.time)
             enqueue!(agent.action_queue, MoveToAction(adjusted_path[i][1]))
         end
         enqueue!(agent.outbox, ArrivedAtNodeMessage(agent, nothing, agent.graph_position))
+        # enqueue!(agent.outbox, IntendedPathMessage(agent, nothing, [adjusted_path[1]]))
         enqueue!(agent.outbox, IntendedPathMessage(agent, nothing, adjusted_path))
     end
 end
 
-function calculate_path_utility(current_time::Float64, horizon::Float64, node_idleness_log::Vector{Float64}, path::Vector{Tuple{Int64, Float64}}, projected_node_visit_times::Vector{PriorityQueue{Float64}})
+function calculate_path_utility(current_time::Float64, horizon::Float64, node_idleness_log::Vector{Float64}, path::Vector{Tuple{Int64, Float64}}, projected_node_visit_times::Vector{Vector{Float64}})
     
-    temp_visit_times = deepcopy(projected_node_visit_times)
+    # temp_visit_times = deepcopy(projected_node_visit_times)
     path_utility = 0.0
+
+    # Todo: expensive
+    self_visit_times = [[] for _ in 1:length(projected_node_visit_times)]
 
     for v in path[2:end]
 
@@ -128,10 +152,16 @@ function calculate_path_utility(current_time::Float64, horizon::Float64, node_id
         t = v[2] + current_time
         alpha = current_time - node_idleness_log[n]
         beta = current_time + horizon
+        
+        # Get projected visit time to node from other agents
+        # A bit expensive
+        # visits = [vt[1] for vt in projected_node_visit_times[n]]
+        visits = [vt for vt in projected_node_visit_times[n]]
 
-        visits = [vt[1] for vt in temp_visit_times[n]]
+        # Append to prior visit times from self on path
+        full_visits = [visits; self_visit_times[n]]
 
-        for visit in visits
+        for visit in full_visits
             if visit <= t && visit > alpha
                 alpha = visit
             elseif visit >= t && visit < horizon
@@ -140,7 +170,10 @@ function calculate_path_utility(current_time::Float64, horizon::Float64, node_id
             end
         end
 
-        temp_visit_times[n][t] = t
+        # temp_visit_times[n][t] = t
+        # Log self visit
+        # Todo: expensive
+        push!(self_visit_times[n], t)
 
         node_utility = (t - alpha) * (beta - t)
         path_utility += node_utility
