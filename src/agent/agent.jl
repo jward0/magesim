@@ -133,7 +133,7 @@ function make_decisions!(agent::AgentState)
             enqueue!(agent.action_queue, MoveToAction(adjusted_path[i][1]))
         end
         enqueue!(agent.outbox, ArrivedAtNodeMessage(agent, nothing, agent.graph_position))
-        # enqueue!(agent.outbox, IntendedPathMessage(agent, nothing, [adjusted_path[1]]))
+        # enqueue!(agent.outbox, IntendedPathMessage(agent, nothing, [adjusted_path[2]]))
         enqueue!(agent.outbox, IntendedPathMessage(agent, nothing, adjusted_path))
     end
 end
@@ -150,6 +150,11 @@ function calculate_path_utility(current_time::Float64, horizon::Float64, node_id
 
         n = v[1]
         t = v[2] + current_time
+
+        if v[2] > horizon
+            break
+        end
+
         alpha = current_time - node_idleness_log[n]
         beta = current_time + horizon
         
@@ -159,7 +164,8 @@ function calculate_path_utility(current_time::Float64, horizon::Float64, node_id
         visits = [vt for vt in projected_node_visit_times[n]]
 
         # Append to prior visit times from self on path
-        full_visits = [visits; self_visit_times[n]]
+        # A bit expensive
+        full_visits = sort!([visits; self_visit_times[n]])
 
         for visit in full_visits
             if visit <= t && visit > alpha
