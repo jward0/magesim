@@ -123,7 +123,8 @@ function make_decisions!(agent::AgentState)
     if isempty(agent.action_queue)
         possible_paths = agent.world_state_belief.weight_limited_paths[agent.graph_position]
         # path_utilities = [calculate_path_utility(agent.world_state_belief.time, agent.values.utility_horizon, agent.values.node_idleness_log, p, agent.values.projected_node_visit_times) for p in possible_paths]
-        path_utilities = [calculate_path_utility(agent.world_state_belief.time, agent.values.utility_horizon, agent.values.node_idleness_log, p, projected_node_visit_times) for p in possible_paths]
+        path_utilities = [calculate_path_utility(agent, agent.world_state_belief.time, agent.values.utility_horizon, agent.values.node_idleness_log, p, projected_node_visit_times) for p in possible_paths]
+        
         selected_path = possible_paths[argmax(path_utilities)]
         adjusted_path = deepcopy(selected_path)
         # Override to make receding horizon
@@ -138,13 +139,15 @@ function make_decisions!(agent::AgentState)
     end
 end
 
-function calculate_path_utility(current_time::Float64, horizon::Float64, node_idleness_log::Vector{Float64}, path::Vector{Tuple{Int64, Float64}}, projected_node_visit_times::Vector{Vector{Float64}})
+# TODO: messy that this takes agent and also a load of stuff that gets pulled from agent
+function calculate_path_utility(agent::AgentState, current_time::Float64, horizon::Float64, node_idleness_log::Vector{Float64}, path::Vector{Tuple{Int64, Float64}}, projected_node_visit_times::Vector{Vector{Float64}})
     
     # temp_visit_times = deepcopy(projected_node_visit_times)
     path_utility = 0.0
 
     # Todo: expensive
     self_visit_times = [[] for _ in 1:length(projected_node_visit_times)]
+    residual_time = horizon
 
     for v in path[2:end]
 
@@ -184,9 +187,13 @@ function calculate_path_utility(current_time::Float64, horizon::Float64, node_id
         node_utility = (t - alpha) * (beta - t)
         path_utility += node_utility
 
+        residual_time = horizon - v[2]
     end
 
-    return path_utility
+
+    path_gps = path_utility / (horizon - residual_time)
+
+    return path_utility / (horizon - residual_time)
 
 end
 
