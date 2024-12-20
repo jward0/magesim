@@ -170,30 +170,63 @@ function calculate_path_utility(agent::AgentState, current_time::Float64, horizo
         # A bit expensive
         full_visits = sort!([visits; self_visit_times[n]])
 
-        for visit in full_visits
+        interference = false
+
+        for visit in visits
             if visit <= t && visit > alpha
                 alpha = visit
+                interference = true
             elseif visit >= t && visit < horizon
                 beta = visit
+                interference = true
                 break
             end
         end
 
+        for visit in self_visit_times[n]
+            if visit <= t && visit > alpha
+                alpha = visit
+            elseif visit >= t && visit < horizon && visit < beta
+                beta = visit
+                break
+            end
+        end
+        # for visit in full_visits
+        #     if visit <= t && visit > alpha
+        #         alpha = visit
+        #     elseif visit >= t && visit < horizon
+        #         beta = visit
+        #         break
+        #     end
+        # end
+
         # temp_visit_times[n][t] = t
         # Log self visit
         # Todo: expensive
+
+        if interference == true
+            break
+        end
+
         push!(self_visit_times[n], t)
+        residual_time = horizon - v[2]
 
         node_utility = (t - alpha) * (beta - t)
-        path_utility += node_utility
+        # Preferably weighting sooner nodes 
+        # HORIZON SCALING APPLIED HERE
+        path_utility += node_utility  * (residual_time/horizon)  
 
-        residual_time = horizon - v[2]
     end
 
 
     path_gps = path_utility / (horizon - residual_time)
 
-    return path_utility / (horizon - residual_time)
+    if horizon == residual_time
+        return 0.0
+    else
+        # RESIDUAL SCALING APPLIED HERE
+        return path_utility  / (horizon - residual_time)
+    end
 
 end
 
