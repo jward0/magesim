@@ -113,6 +113,8 @@ function step_agents_(agents::Array{AgentState, 1},
     # a single loop instead) as users may wish to insert message-passing steps between steps, and the
     # seperate loops give an easy way to achieve synchronicity
 
+    # TODO: work out why turning multithreading off breaks it
+
     if multithreaded
 
         Threads.@threads for agent in agents

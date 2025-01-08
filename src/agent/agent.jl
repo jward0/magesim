@@ -124,7 +124,6 @@ function make_decisions!(agent::AgentState)
         possible_paths = agent.world_state_belief.weight_limited_paths[agent.graph_position]
         # path_utilities = [calculate_path_utility(agent.world_state_belief.time, agent.values.utility_horizon, agent.values.node_idleness_log, p, agent.values.projected_node_visit_times) for p in possible_paths]
         path_utilities = [calculate_path_utility(agent, agent.world_state_belief.time, agent.values.utility_horizon, agent.values.node_idleness_log, p, projected_node_visit_times) for p in possible_paths]
-        
         selected_path = possible_paths[argmax(path_utilities)]
         adjusted_path = deepcopy(selected_path)
         # Override to make receding horizon
@@ -225,7 +224,7 @@ function calculate_path_utility(agent::AgentState, current_time::Float64, horizo
         return 0.0
     else
         # RESIDUAL SCALING APPLIED HERE
-        return path_utility  / (horizon - residual_time)
+        return path_utility  # / (horizon - residual_time)
     end
 
 end

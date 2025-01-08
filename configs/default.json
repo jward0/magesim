@@ -1,8 +1,8 @@
 {
-	"world": "example",
+	"world": "cumberland",
 	"headless": true,
-	"n_agents": 2,
-	"agent_starts": [1, 16],
+	"n_agents": 8,
+	"agent_starts": [1, 17, 9, 10, 13, 16, 19, 22],
 	"speedup": 10000,
 	"timeout": 1000,
 	"multithreaded": true,
