@@ -2,6 +2,7 @@ module Agent
 
 import ..Types: AgentState, WorldState, Position, AbstractAction, WaitAction, MoveToAction, StepTowardsAction, IntendedPathMessage, ArrivedAtNodeMessage
 import ..AgentDynamics: calculate_next_position
+import ..Utils: get_neighbours
 
 using DataStructures
 
@@ -138,6 +139,100 @@ function make_decisions!(agent::AgentState)
     end
 end
 
+function best_path_astar(h::Function, agent::AgentState, start_time::Float64, horizon_length::Float64, idlenesses::Vector{Float64}, projected_node_visit_times::Vector{Vector{Float64}})
+
+    adj = agent.world_state_belief.adj
+    n_nodes = size(adj)[1]
+    end_time = start_time + horizon
+
+    open_set = PriorityQueue()
+
+    # each entry in open_set has form {"path": Vector{Tuple{Int64, Float64}}, "r" : Float64, "interfered": Bool}
+    # priority is then -(r + h(t, horizon, idlenesses, adj))
+    
+    enqueue!(open_set, Dict([("path", [(agent.graph_position, start_time)]), ("r", 0.0), ("interfered", false)]), 0.0)
+
+    while !isempty(open_set)
+
+        current = dequeue!(open_set)
+        at_node = current["path"][end][1]
+        t = current["path"][end][2]
+        r = current["r"]
+        # t = current["t"] 
+
+        # If current is at goal, return
+
+        # this is faster than utils.get_neighbours for no dummy nodes
+        neighbours = [i for i in 1:n if adj[at_node, i] != 0]
+
+        for neighbour in neighbours
+
+            # Check other agent visits for interference
+
+            # Get self visits
+            self_visits = []
+
+            i = idlenesses[at_node]
+            w = adj[at_node, neighbour]
+
+            # Calculate step reward
+            real_reward = r + step_reward(start_time, end_time, t, i, w, self_visits)
+            heuristic_reward = h(start_time, end_time, t, i, adj)
+
+            enqueue!(open_set, 
+                Dict([("path", [current["path"]; [(neighbour, t + w)]]), 
+                      ("r", real_reward), 
+                      ("interfered", false)]), 
+                -(real_reward + heuristic_reward))
+        end
+    end
+end
+
+function step_reward(start_time::Float64, end_time::Float64, current_time::Float64, idleness::Float64, weight::Float64, self_visits::Vector{Int64})
+
+    remaining_horizon = end_time - current_time
+    horizon = end_time - start_time
+
+    alpha = current_time - idleness
+    arrival_time = current_time + weight
+
+    for visit in self_visits
+        if visit <= arrival_time && visit > alpha
+            alpha = visit
+        end
+    end
+
+    raw_reward = (arrival_time - alpha) * (remaining_horizon - weight)
+    discount_factor = remaining_horizon / horizon
+
+    return raw_reward * discount_factor
+end
+
+function astar_heuristic(start_time::Float64, end_time::Float64, current_time::Float64, idlenesses::Vector{Float64}, adj::Matrix{Float64})
+
+    remaining_horizon = end_time - current_time
+    horizon = end_time - start_time
+
+    discount_window = (1/horizon) * sum([end_time-t for t in current_time:end_time])
+
+    n = size(world_adj)[1]
+
+    edge_rewards_per_second = []
+
+    # It's this or a horrible one-liner (or I have to think a bit harder, and it's Friday afternoon)
+    for i in 1:n
+        for j in 1:i
+            if adj[i, j] != 0
+                reward_per_second = (max(idlenesses[i], idlenesses[j]) + adj[i, j]) * (remaining_horizon - adj[i, j]) / adj[i, j]
+                push!(edge_gains, reward_per_second)
+            end
+        end
+    end
+
+    return discount_window * maximum(edge_rewards_per_second)
+
+end
+
 # TODO: messy that this takes agent and also a load of stuff that gets pulled from agent
 function calculate_path_utility(agent::AgentState, current_time::Float64, horizon::Float64, node_idleness_log::Vector{Float64}, path::Vector{Tuple{Int64, Float64}}, projected_node_visit_times::Vector{Vector{Float64}})
     
@@ -211,7 +306,7 @@ function calculate_path_utility(agent::AgentState, current_time::Float64, horizo
         residual_time = horizon - v[2]
 
         node_utility = (t - alpha) * (beta - t)
-        # Preferably weighting sooner nodes 
+        # Preferentially weighting sooner nodes 
         # HORIZON SCALING APPLIED HERE
         path_utility += node_utility  * (residual_time/horizon)  
 
