@@ -55,7 +55,7 @@ struct Logger
 
     function Logger(config::Config)
 
-        log_directory = string("logs/bin/", Dates.format(now(), "yyyymmdd_HH:MM:SS/"))
+        log_directory = string("logs/bin/", Dates.format(now(), "yyyymmdd_HH:MM:SS.ss/"))
 
         if !isdir(log_directory)
             Base.Filesystem.mkpath(log_directory)
@@ -260,7 +260,7 @@ mutable struct AgentValues
             Dict(),
             zeros(Float64, (n_nodes, n_nodes)),
             0,
-            "SPNS",
+            "visitmaxing",
             zeros(Int64, n_agents),
             (0.1, 100.0),
             [PriorityQueue{Float64, Float64}() for _ in 1:n_nodes],

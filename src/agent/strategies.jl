@@ -1,28 +1,31 @@
-# import ..Types: AgentState, IdlenessLogMessage, ArrivedAtNodeMessageSEBS, ArrivedAtNodeMessageSPNS, PriorityMessage, PosMessage, GoingToMessage, ObservedWeightMessage, MoveToAction
-# import ..Utils: get_neighbours
+function visit_maximisation!(agent::AgentState)
 
-# using Accessors
-# using DataStructures
-# using Graphs, SimpleWeightedGraphs, LinearAlgebra
-# using LinearAlgebra
-# using Statistics
-# using Flux
+    if isempty(agent.action_queue)
 
-# # Duplicated from agent.jl (yeah, yeah...)
-# function update_weight_logs!(agent::AgentState, src::Int64, dst::Int64, ts::Real, w::Float64)
-#     if !haskey(agent.values.observed_weights_log, (src, dst))
-#         agent.values.observed_weights_log[(src, dst)] = []
-#     end
-#     if !haskey(agent.values.observed_weights_log, (dst, src))
-#         agent.values.observed_weights_log[(dst, src)] = []
-#     end
+        neighbours = get_neighbours(agent.graph_position, agent.world_state_belief, true)
 
-#     push!(agent.values.observed_weights_log[(src, dst)], (ts, w))
-#     push!(agent.values.observed_weights_log[(dst, src)], (ts, w))
-#     agent.world_state_belief.adj[src, dst] = w
-#     agent.world_state_belief.adj[dst, src] = w
-# end
+        if length(neighbours) == 1
+            enqueue!(agent.action_queue, MoveToAction(neighbours[1]))
+        elseif !isa(agent.graph_position, Int64)
+            # Catch the potential problem of an agent needing a new action
+            # while midway between two nodes (not covered by algo) - 
+            # solution to this is just to pick one
+            enqueue!(agent.action_queue, MoveToAction(neighbours[1]))
+        else
+            distances = ceil.([agent.world_state_belief.adj[agent.graph_position, n] for n in neighbours])
 
+            min_dist_indices = findall(distances .== minimum(distances))
+
+            target = neighbours[rand(min_dist_indices)]
+
+            enqueue!(agent.action_queue, MoveToAction(target))
+        end
+
+        if agent.graph_position isa Int64
+            agent.values.departed_time = agent.world_state_belief.time
+        end
+    end
+end
 
 """
     make_decisions_SPNS!(agent::AgentState)
@@ -39,7 +42,7 @@ function make_decisions_SPNS!(agent::AgentState)
 
         adjacency_matrix = agent.world_state_belief.adj / c
 
-        unnormalised_dists = dijkstra_shortest_paths(SimpleWeightedDiGraph(agent.world_state_belief.adj), agent.graph_position).dists
+        # unnormalised_dists = dijkstra_shortest_paths(SimpleWeightedDiGraph(agent.world_state_belief.adj), agent.graph_position).dists
         # distances = get_distances(agent.graph_position, agent.position, agent.world_state_belief)
         idlenesses = agent.values.idleness_log
 
@@ -356,6 +359,7 @@ end
 function calculate_gain(node::Int64, agent::AgentState)
     # Only valid for 1-hop
     distance = agent.world_state_belief.adj[agent.graph_position, node]
+    # distance = ceil(agent.world_state_belief.adj[agent.graph_position, node])
     return agent.values.idleness_log[node] / distance
 end
 

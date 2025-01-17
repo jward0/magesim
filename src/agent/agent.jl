@@ -214,6 +214,37 @@ function update_effective_adj!(agent::AgentState, dt::Float64)
     end
 end
 
+function update_effective_adj_rolling!(agent::AgentState, edge::Tuple{Int64, Int64}, ts::Float64, w::Float64)
+
+    if !haskey(agent.values.observed_weights_log, edge)
+        agent.values.observed_weights_log[edge] = []
+    end
+    if !haskey(agent.values.observed_weights_log, edge)
+        agent.values.observed_weights_log[edge] = []
+    end
+
+    push!(agent.values.observed_weights_log[edge], [ts, w])
+
+    # If this is not the most recent observation, sort
+    if length(agent.values.observed_weights_log[edge]) > 1 && ts < agent.values.observed_weights_log[edge][end-1][1]
+        sort!(agent.values.observed_weights_log[edge], by = x -> x[1])
+    end
+    # agent.world_state_belief.adj[src, dst] = w
+    # agent.world_state_belief.adj[dst, src] = w
+
+    agent.values.observed_weights_log[reverse(edge)] = agent.values.observed_weights_log[edge]
+
+    window_length = 10
+    last_n_obs = [a[2] for a in agent.values.observed_weights_log[edge][max(1, end-window_length+1):end]]
+    window_mean = mean(last_n_obs)
+    window_var = var(last_n_obs)
+
+    new_val = window_mean # * (1-(sqrt(window_var)/window_mean))^0.5
+
+    agent.values.effective_adj[edge...] = new_val
+    agent.values.effective_adj[reverse(edge)...] = new_val 
+end
+
 
 function update_effective_adj_decay!(agent::AgentState, visited_edge::Tuple{Int64, Int64}, observed_w::Float64)
 
@@ -227,6 +258,10 @@ function update_effective_adj_decay!(agent::AgentState, visited_edge::Tuple{Int6
     # ~~~ decay rule
     if decay
 
+        # SIMPLE MONITORING (A=0) HAS DELTA = 1.0
+        # NORMAL DECAY RULE HAS 0.975
+
+        # decay_constant = 1.0
         decay_constant = 0.975
         mask = findall(iszero, agent.values.effective_adj)
 
@@ -321,6 +356,7 @@ function observe_world!(agent::AgentState, world::WorldState)
             agent.values.process_parameter_estimates[(src, dst)] = (c, sigma, t)
             agent.values.process_parameter_estimates[(dst, src)] = (c, sigma, t)
             """
+            # update_effective_adj_rolling!(agent, (src, dst), t, t - agent.values.departed_time)
             update_effective_adj_decay!(agent, (src, dst), t - agent.values.departed_time)
             
         end
@@ -334,12 +370,14 @@ function make_decisions!(agent::AgentState)
 
     # If perfect
     tp = agent.world_state_belief.temporal_profiles[floor(Integer, agent.world_state_belief.time)+1]
-    new_effective_adj = agent.world_state_belief.adj ./ tp
+    new_effective_adj = ceil.(agent.world_state_belief.adj ./ tp)
     new_effective_adj[isnan.(new_effective_adj)] .= 0.0
+
+    # If nothing
 
     # otherwise
     # new_effective_adj = agent.values.effective_adj
-
+    
     wsb = agent.world_state_belief
     @reset wsb.adj=new_effective_adj
     agent.world_state_belief = wsb
@@ -350,6 +388,8 @@ function make_decisions!(agent::AgentState)
         make_decisions_SPNS!(agent)
     elseif agent.values.strategy == "ER"
         make_decisions_ER!(agent)
+    elseif agent.values.strategy == "visitmaxing"
+        visit_maximisation!(agent)
     end
 end
 
