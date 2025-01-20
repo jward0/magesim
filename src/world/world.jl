@@ -53,7 +53,7 @@ function create_world(config::Config)
 
     world_state = WorldState(nodes, n_nodes, graph_map, obstacle_map, scale_factor)
     adj = get_real_adj(world_state)
-    weight_limited_paths = generate_weight_limited_paths(adj, 50.0)
+    weight_limited_paths = generate_weight_limited_paths(adj, 30.0)
 
     @reset world_state.adj=adj
     @reset world_state.weight_limited_paths=weight_limited_paths

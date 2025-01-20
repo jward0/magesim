@@ -212,7 +212,7 @@ struct AgentValues
             [[] for _ in 1:n_agents],
             [PriorityQueue{Float64, Float64}() for _ in 1:n_nodes],
             zeros(Float64, n_nodes),
-            50.0
+            30.0
         )
     end
 end
