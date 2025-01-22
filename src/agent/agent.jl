@@ -122,11 +122,11 @@ function make_decisions!(agent::AgentState)
     end
 
     if isempty(agent.action_queue)
-        possible_paths = agent.world_state_belief.weight_limited_paths[agent.graph_position]
+        # possible_paths = agent.world_state_belief.weight_limited_paths[agent.graph_position]
         # # path_utilities = [calculate_path_utility(agent.world_state_belief.time, agent.values.utility_horizon, agent.values.node_idleness_log, p, agent.values.projected_node_visit_times) for p in possible_paths]
-        path_utilities = [calculate_path_utility(agent, agent.world_state_belief.time, agent.values.utility_horizon, agent.values.node_idleness_log, p, projected_node_visit_times) for p in possible_paths]
-        selected_path = possible_paths[argmax(path_utilities)]
-        adjusted_path = deepcopy(selected_path)
+        # path_utilities = [calculate_path_utility(agent, agent.world_state_belief.time, agent.values.utility_horizon, agent.values.node_idleness_log, p, projected_node_visit_times) for p in possible_paths]
+        # selected_path = possible_paths[argmax(path_utilities)]
+        # adjusted_path = deepcopy(selected_path)
         # Override to make receding horizon
         # for i in 1:length(adjusted_path)
         # for i in 2:2
@@ -145,14 +145,14 @@ function make_decisions!(agent::AgentState)
         # enqueue!(agent.outbox, IntendedPathMessage(agent, nothing, adjusted_path))
         enqueue!(agent.outbox, IntendedPathMessage(agent, nothing, best_path))
 
-        println("+++++++++++++++++++++++")
-        println(possible_paths)
-        println(path_utilities)
-        println(adjusted_path)
-        println(maximum(path_utilities))
-        println("===")
-        println(best_path)
-        println(reward)
+        # println("+++++++++++++++++++++++")
+        # println(possible_paths)
+        # println(path_utilities)
+        # println(adjusted_path)
+        # println(maximum(path_utilities))
+        # println("===")
+        # println(best_path)
+        # println(reward)
     end
 end
 
@@ -195,6 +195,8 @@ function best_path_astar(h::Function, agent::AgentState, projected_node_visit_ti
         t = current["path"][end][2]
         r = current["r"]
         # t = current["t"] 
+        # println("###")
+        # println(current)
 
         # this is faster than utils.get_neighbours for no dummy nodes
         # also checks for timelimit breaking
@@ -206,6 +208,7 @@ function best_path_astar(h::Function, agent::AgentState, projected_node_visit_ti
         end
 
         for target in neighbours
+            # println(target)
 
             w = adj[at_node, target]
             visit_t = t + w
@@ -215,13 +218,17 @@ function best_path_astar(h::Function, agent::AgentState, projected_node_visit_ti
 
             # Calculate step reward
             real_reward = r + step_reward(start_time, end_time, t, idlenesses[target], w, self_visits)
-            heuristic_reward = h(start_time, end_time, t, idlenesses, adj)
-
+            heuristic_reward = h(target, start_time, end_time, visit_t, idlenesses, adj, agent.world_state_belief.paths.dists)
+            # println("Added real reward = $(step_reward(start_time, end_time, t, idlenesses[target], w, self_visits))")
             enqueue!(open_set, 
                 Dict([("path", [current["path"]; [(target, visit_t)]]), 
-                      ("r", real_reward), 
-                      ("interfered", false)]), 
+                      ("r", real_reward)
+                      ]), 
                 -(real_reward + heuristic_reward))
+            # println("Final real reward = $(real_reward)")
+            # println("Heuristic reward = $(heuristic_reward)")
+            # println("Time remaining = $(end_time - visit_t)")
+            # println("Final priority = $(real_reward + heuristic_reward)")
         end
     end
 end
@@ -247,27 +254,42 @@ function step_reward(start_time::Float64, end_time::Float64, current_time::Float
     return raw_reward * discount_factor
 end
 
-function astar_heuristic(start_time::Float64, end_time::Float64, current_time::Float64, idlenesses::Vector{Float64}, adj::Matrix{Float64})
+function astar_heuristic(start_node::Int64, start_time::Float64, end_time::Float64, current_time::Float64, idlenesses::Vector{Float64}, adj::Matrix{Float64}, fw_dists::Matrix{Float64})
 
     remaining_horizon = end_time - current_time
     horizon = end_time - start_time
 
     # discount_window = (1/horizon) * sum([end_time-t for t in current_time:end_time])
     discount_window = sum([astar_discount(start_time, ts, end_time) for ts in current_time:end_time])
+    # println("discount window = $(discount_window)")
 
     n = size(adj)[1]
 
-    edge_rewards_per_second = []
+    edge_rewards_per_second = [0.0]
 
+    # Limits search to arcs between nodes that are reachable in the remaining time
+    reachable_nodes = [i for i in 1:n if fw_dists[start_node, i] <= horizon]
+    push!(reachable_nodes, start_node)
+    
     # It's this or a horrible one-liner (or I have to think a bit harder, and it's Friday afternoon)
-    for i in 1:n
-        for j in 1:i
+    for a in 1:length(reachable_nodes)
+        for b in 1:a
+            i = reachable_nodes[a]
+            j = reachable_nodes[b]
             if adj[i, j] != 0
                 reward_per_second = (max(idlenesses[i], idlenesses[j]) + adj[i, j]) * (remaining_horizon - adj[i, j]) / adj[i, j]
                 push!(edge_rewards_per_second, reward_per_second)
             end
         end
     end
+    # for i in 1:n
+    #     for j in 1:i
+    #         if adj[i, j] != 0
+    #             reward_per_second = (max(idlenesses[i], idlenesses[j]) + adj[i, j]) * (remaining_horizon - adj[i, j]) / adj[i, j]
+    #             push!(edge_rewards_per_second, reward_per_second)
+    #         end
+    #     end
+    # end
 
     return discount_window * maximum(edge_rewards_per_second)
 

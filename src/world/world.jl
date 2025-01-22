@@ -79,7 +79,7 @@ function world_step(world_state::WorldState, agents::Array{AgentState, 1})
             end
         end
     end
-   
+
     @reset world_state.nodes=nodes    
     @reset world_state.time=world_state.time+1
 
