@@ -368,19 +368,29 @@ end
 
 function make_decisions!(agent::AgentState)
 
+    if agent.values.dyn_mode == "perfect"
+        tp = agent.world_state_belief.temporal_profiles[floor(Integer, agent.world_state_belief.time)+1]
+        new_effective_adj = ceil.(agent.world_state_belief.adj ./ tp)
+        new_effective_adj[isnan.(new_effective_adj)] .= 0.0
+    elseif agent.values.dyn_mode == "active"
+        new_effective_adj = agent.values.effective_adj
+    end
+
+    if agent.values.dyn_mode != "nothing"
+        wsb = agent.world_state_belief
+        @reset wsb.adj=new_effective_adj
+        agent.world_state_belief = wsb
+    end
+
     # If perfect
-    tp = agent.world_state_belief.temporal_profiles[floor(Integer, agent.world_state_belief.time)+1]
-    new_effective_adj = ceil.(agent.world_state_belief.adj ./ tp)
-    new_effective_adj[isnan.(new_effective_adj)] .= 0.0
+    # tp = agent.world_state_belief.temporal_profiles[floor(Integer, agent.world_state_belief.time)+1]
+    # new_effective_adj = ceil.(agent.world_state_belief.adj ./ tp)
+    # new_effective_adj[isnan.(new_effective_adj)] .= 0.0
 
     # If nothing
 
     # otherwise
     # new_effective_adj = agent.values.effective_adj
-    
-    wsb = agent.world_state_belief
-    @reset wsb.adj=new_effective_adj
-    agent.world_state_belief = wsb
 
     if agent.values.strategy == "SEBS"
         make_decisions_SEBS!(agent)

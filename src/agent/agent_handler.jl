@@ -35,6 +35,7 @@ function spawn_agents(world::WorldState, config::Config)
         agents[i].values.last_visited = start_nodes[i]
         agents[i].values.original_dr = 3.0  # copy(maximum(world.adj) / minimum(world.adj[findall(!iszero, world.adj)]))
         agents[i].values.comm_failure = config.comm_failure
+        agents[i].values.dyn_mode = config.custom_config.data["dyn_mode"]
     end
 
     return agents

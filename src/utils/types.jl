@@ -241,6 +241,8 @@ mutable struct AgentValues
     original_adj_belief::Matrix{Float64}
     # Comm failure
     comm_failure::Float64
+    # Dynamics mode
+    dyn_mode::String
 
     function AgentValues(n_agents::Int64, n_nodes::Int64, custom_config::UserConfig)
         new(ones(Float64, (n_agents, n_nodes)) .* -9999, 
@@ -260,7 +262,7 @@ mutable struct AgentValues
             Dict(),
             zeros(Float64, (n_nodes, n_nodes)),
             0,
-            "visitmaxing",
+            "SEBS",
             zeros(Int64, n_agents),
             (0.1, 100.0),
             [PriorityQueue{Float64, Float64}() for _ in 1:n_nodes],
@@ -268,7 +270,8 @@ mutable struct AgentValues
             -1.0,
             0.0,
             zeros(Float64, (n_nodes, n_nodes)),
-            0.0)
+            0.0,
+            "perfect")
 
     end
 end
