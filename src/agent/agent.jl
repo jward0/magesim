@@ -144,7 +144,8 @@ function best_path_astar(h::Function, agent::AgentState, projected_node_visit_ti
     # Remove nodes set for visit by other agents from consideration - best way to handle this
     for i in 1:n_nodes
         if length(projected_node_visit_times[i]) > 0
-            adj[:, i] .= 0
+            # adj[:, i] .= 0
+            # adj[i, :] .= 0
         end
     end
     # If no route from start exists due to removals, ignore the most immediate ones
@@ -183,7 +184,7 @@ function best_path_astar(h::Function, agent::AgentState, projected_node_visit_ti
             self_visits = [n[2] for n in current["path"] if n[1] == target]
 
             # Calculate step reward
-            real_reward = r + step_reward(start_time, end_time, t, idlenesses[target], w, self_visits)
+            real_reward = r + step_reward(start_time, end_time, t, idlenesses[target], w, self_visits, projected_node_visit_times[target])
             heuristic_reward = h(target, start_time, end_time, visit_t, idlenesses, adj, agent.world_state_belief.paths.dists)
             enqueue!(open_set, 
                 Dict([("path", [current["path"]; [(target, visit_t)]]), 
@@ -194,7 +195,7 @@ function best_path_astar(h::Function, agent::AgentState, projected_node_visit_ti
     end
 end
 
-function step_reward(start_time::Float64, end_time::Float64, current_time::Float64, idleness::Float64, weight::Float64, self_visits::Vector{Float64})
+function step_reward(start_time::Float64, end_time::Float64, current_time::Float64, idleness::Float64, weight::Float64, self_visits::Vector{Float64}, other_visits::Vector{Float64})
 
     remaining_horizon = end_time - (current_time + weight)
     horizon = end_time - start_time
@@ -202,7 +203,9 @@ function step_reward(start_time::Float64, end_time::Float64, current_time::Float
     alpha = current_time - idleness
     arrival_time = current_time + weight
 
-    for visit in self_visits
+    visits = sort([self_visits; other_visits])
+
+    for visit in visits
         if visit <= arrival_time && visit > alpha
             alpha = visit
         end
