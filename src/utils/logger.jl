@@ -1,6 +1,7 @@
 module LogWriter
 
 import ..Types: Logger, WorldState, AgentState, Node
+import ..Utils: pos_distance
 using Graphs, SimpleWeightedGraphs
 using Dates
 
@@ -57,6 +58,26 @@ function log(target::Array{AgentState, 1}, logger::Logger, timestep::Int)
 
     csv_line = make_line(timestep, string.(positions))
     open(fpath, "a") do file
+        write(file, csv_line)
+        write(file,"\n")
+    end
+
+    interference_fpath = string(logger.log_directory, "interferences.csv")
+    ts_interferences = 0
+    for i in 1:length(target)
+        for j in 1:i-1
+            ts_interferences +=  pos_distance(target[i].position, target[j].position) < 1.01
+        end
+    end
+    if !isfile(interference_fpath)
+        header = make_line("timestep", ["interferences"])
+        open(interference_fpath, "w") do file
+            write(file, header)
+            write(file,"\n")
+        end
+    end
+    csv_line = make_line(timestep, string.([ts_interferences]))
+    open(interference_fpath, "a") do file
         write(file, csv_line)
         write(file,"\n")
     end
