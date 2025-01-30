@@ -70,10 +70,6 @@ function observe_world!(agent::AgentState, world::WorldState)
             n = message.source
             # Log intended paths
             agent.values.other_agent_announced_paths[message.source] = message.message
-            # for v in message.message
-                # Insert projected visit time into relevant priority queue, with priority equal to projected visit time
-                # agent.values.projected_node_visit_times[v[1]][v[2]] = v[2]                
-            # end
         elseif message isa ArrivedAtNodeMessage
             agent.values.node_idleness_log[message.message] = 1.0
         end
@@ -113,8 +109,6 @@ function make_decisions!(agent::AgentState)
         while !isempty(q)
             if q[1] < agent.world_state_belief.time
                 popfirst!(q)
-            # if peek(q)[1] < agent.world_state_belief.time
-                # dequeue!(q)
             else
                 break
             end
@@ -122,37 +116,13 @@ function make_decisions!(agent::AgentState)
     end
 
     if isempty(agent.action_queue)
-        # possible_paths = agent.world_state_belief.weight_limited_paths[agent.graph_position]
-        # # path_utilities = [calculate_path_utility(agent.world_state_belief.time, agent.values.utility_horizon, agent.values.node_idleness_log, p, agent.values.projected_node_visit_times) for p in possible_paths]
-        # path_utilities = [calculate_path_utility(agent, agent.world_state_belief.time, agent.values.utility_horizon, agent.values.node_idleness_log, p, projected_node_visit_times) for p in possible_paths]
-        # selected_path = possible_paths[argmax(path_utilities)]
-        # adjusted_path = deepcopy(selected_path)
-        # Override to make receding horizon
-        # for i in 1:length(adjusted_path)
-        # for i in 2:2
-            # adjusted_path[i] = adjusted_path[i] .+ (0.0, agent.world_state_belief.time)
-            # enqueue!(agent.action_queue, MoveToAction(adjusted_path[i][1]))
-        # end
 
         best_path, reward = best_path_astar(astar_heuristic, agent, projected_node_visit_times)
-        # println([b[1] for b in best_path])
-        # First entry is current position
         target = best_path[2][1]
         enqueue!(agent.action_queue, MoveToAction(target))
 
         enqueue!(agent.outbox, ArrivedAtNodeMessage(agent, nothing, agent.graph_position))
-        # enqueue!(agent.outbox, IntendedPathMessage(agent, nothing, [adjusted_path[2]]))
-        # enqueue!(agent.outbox, IntendedPathMessage(agent, nothing, adjusted_path))
         enqueue!(agent.outbox, IntendedPathMessage(agent, nothing, best_path))
-
-        # println("+++++++++++++++++++++++")
-        # println(possible_paths)
-        # println(path_utilities)
-        # println(adjusted_path)
-        # println(maximum(path_utilities))
-        # println("===")
-        # println(best_path)
-        # println(reward)
     end
 end
 
@@ -194,9 +164,6 @@ function best_path_astar(h::Function, agent::AgentState, projected_node_visit_ti
         at_node = current["path"][end][1]
         t = current["path"][end][2]
         r = current["r"]
-        # t = current["t"] 
-        # println("###")
-        # println(current)
 
         # this is faster than utils.get_neighbours for no dummy nodes
         # also checks for timelimit breaking
@@ -208,7 +175,6 @@ function best_path_astar(h::Function, agent::AgentState, projected_node_visit_ti
         end
 
         for target in neighbours
-            # println(target)
 
             w = adj[at_node, target]
             visit_t = t + w
@@ -219,16 +185,11 @@ function best_path_astar(h::Function, agent::AgentState, projected_node_visit_ti
             # Calculate step reward
             real_reward = r + step_reward(start_time, end_time, t, idlenesses[target], w, self_visits)
             heuristic_reward = h(target, start_time, end_time, visit_t, idlenesses, adj, agent.world_state_belief.paths.dists)
-            # println("Added real reward = $(step_reward(start_time, end_time, t, idlenesses[target], w, self_visits))")
             enqueue!(open_set, 
                 Dict([("path", [current["path"]; [(target, visit_t)]]), 
                       ("r", real_reward)
                       ]), 
                 -(real_reward + heuristic_reward))
-            # println("Final real reward = $(real_reward)")
-            # println("Heuristic reward = $(heuristic_reward)")
-            # println("Time remaining = $(end_time - visit_t)")
-            # println("Final priority = $(real_reward + heuristic_reward)")
         end
     end
 end
@@ -259,9 +220,7 @@ function astar_heuristic(start_node::Int64, start_time::Float64, end_time::Float
     remaining_horizon = end_time - current_time
     horizon = end_time - start_time
 
-    # discount_window = (1/horizon) * sum([end_time-t for t in current_time:end_time])
     discount_window = sum([astar_discount(start_time, ts, end_time) for ts in current_time:end_time])
-    # println("discount window = $(discount_window)")
 
     n = size(adj)[1]
 
@@ -282,114 +241,13 @@ function astar_heuristic(start_node::Int64, start_time::Float64, end_time::Float
             end
         end
     end
-    # for i in 1:n
-    #     for j in 1:i
-    #         if adj[i, j] != 0
-    #             reward_per_second = (max(idlenesses[i], idlenesses[j]) + adj[i, j]) * (remaining_horizon - adj[i, j]) / adj[i, j]
-    #             push!(edge_rewards_per_second, reward_per_second)
-    #         end
-    #     end
-    # end
 
     return discount_window * maximum(edge_rewards_per_second)
 
 end
 
 function astar_discount(start_time::Float64, arrival_time::Float64, end_time::Float64)
-    # return 2.71828 ^ -(arrival_time - start_time)
     return (end_time - arrival_time) / (end_time - start_time)
-    # return 1.0
-end
-
-# TODO: messy that this takes agent and also a load of stuff that gets pulled from agent
-function calculate_path_utility(agent::AgentState, current_time::Float64, horizon::Float64, node_idleness_log::Vector{Float64}, path::Vector{Tuple{Int64, Float64}}, projected_node_visit_times::Vector{Vector{Float64}})
-    
-    # temp_visit_times = deepcopy(projected_node_visit_times)
-    path_utility = 0.0
-
-    # Todo: expensive
-    self_visit_times = [[] for _ in 1:length(projected_node_visit_times)]
-    residual_time = horizon
-
-    for v in path[2:end]
-
-        n = v[1]
-        t = v[2] + current_time
-
-        if v[2] > horizon
-            break
-        end
-
-        alpha = current_time - node_idleness_log[n]
-        beta = current_time + horizon
-        
-        # Get projected visit time to node from other agents
-        # A bit expensive
-        # visits = [vt[1] for vt in projected_node_visit_times[n]]
-        visits = [vt for vt in projected_node_visit_times[n]]
-
-        # Append to prior visit times from self on path
-        # A bit expensive
-        full_visits = sort!([visits; self_visit_times[n]])
-
-        interference = false
-
-        for visit in visits
-            if visit <= t && visit > alpha
-                alpha = visit
-                interference = true
-            elseif visit >= t && visit < horizon
-                beta = visit
-                interference = true
-                break
-            end
-        end
-
-        for visit in self_visit_times[n]
-            if visit <= t && visit > alpha
-                alpha = visit
-            elseif visit >= t && visit < horizon && visit < beta
-                beta = visit
-                break
-            end
-        end
-        # for visit in full_visits
-        #     if visit <= t && visit > alpha
-        #         alpha = visit
-        #     elseif visit >= t && visit < horizon
-        #         beta = visit
-        #         break
-        #     end
-        # end
-
-        # temp_visit_times[n][t] = t
-        # Log self visit
-        # Todo: expensive
-
-        if interference == true
-            break
-        end
-
-        push!(self_visit_times[n], t)
-        residual_time = horizon - v[2]
-
-        node_utility = (t - alpha) * (beta - t)
-        # Preferentially weighting sooner nodes 
-        # HORIZON SCALING APPLIED HERE
-        path_utility += node_utility  * (residual_time/horizon)  
-
-    end
-
-
-    path_gps = path_utility / (horizon - residual_time)
-
-    if horizon == residual_time
-        return 0.0
-    else
-        # RESIDUAL SCALING APPLIED HERE
-        return path_utility  # / (horizon - residual_time)
-    end
-
 end
 
 end
