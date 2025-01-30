@@ -24,4 +24,8 @@ docs/site/
 Manifest.toml
 
 logs/*
+maps/*
+configs/*
+temporal_profiles/*
+
 __pycache__/
