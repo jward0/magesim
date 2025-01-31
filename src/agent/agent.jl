@@ -142,17 +142,17 @@ function best_path_astar(h::Function, agent::AgentState, projected_node_visit_ti
     best_path_reward = 0.0
 
     # Remove nodes set for visit by other agents from consideration - best way to handle this
-    for i in 1:n_nodes
-        if length(projected_node_visit_times[i]) > 0
-            # adj[:, i] .= 0
-            # adj[i, :] .= 0
-        end
-    end
-    # If no route from start exists due to removals, ignore the most immediate ones
-    if sum(adj[agent.graph_position, :]) == 0
-        # Don't need to copy here due to taking a view on original adj
-        adj[agent.graph_position, :] = agent.world_state_belief.adj[agent.graph_position, :]
-    end
+    # for i in 1:n_nodes
+    #     if length(projected_node_visit_times[i]) > 0
+    #         adj[:, i] .= 0
+    #         # adj[i, :] .= 0
+    #     end
+    # end
+    # # If no route from start exists due to removals, ignore the most immediate ones
+    # if sum(adj[agent.graph_position, :]) == 0
+    #     # Don't need to copy here due to taking a view on original adj
+    #     adj[agent.graph_position, :] = agent.world_state_belief.adj[agent.graph_position, :]
+    # end
 
     # each entry in open_set has form {"path": Vector{Tuple{Int64, Float64}}, "r" : Float64}
     # priority is then -(r + h(t, horizon, idlenesses, adj))
@@ -250,7 +250,10 @@ function astar_heuristic(start_node::Int64, start_time::Float64, end_time::Float
 end
 
 function astar_discount(start_time::Float64, arrival_time::Float64, end_time::Float64)
-    return (end_time - arrival_time) / (end_time - start_time)
+    # return 1 # No discount
+    # return 1/(arrival_time - start_time) # "1/n" discount
+    # return 0.95 ^ (arrival_time - start_time) # x^n
+    return (end_time - arrival_time) / (end_time - start_time) # "linear" discount
 end
 
 end
