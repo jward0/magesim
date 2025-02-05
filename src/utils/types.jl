@@ -206,25 +206,16 @@ end
 # --- Agent types ---
 
 mutable struct AgentValues
-    # There's a LOT of junk in here that I don't use any more
-    priority_log::Array{Float64, 2}
-    priority_weights::Array{Float64, 1}
     other_targets::Array{Int64, 1}
     idleness_log::Array{Float64, 1}
-    last_terminal_idlenesses::Array{Float64, 1}
-    avg_i_peak::Vector{Float64} # value, t
-    mean_i_log::Vector{Float64}
-    agent_dists_log::Array{Float64, 1}
     n_agents_belief::Int64
     last_visited::Int64
     last_last_visited::Int64
-    n_messages::Int64
     current_target::Int64
     # Keys are (src, dst), values are [time, observed weight]
     # observed_weights_log must be populated such that the values are each internally sorted
     observed_weights_log::Dict{Tuple{Int64, Int64}, Vector{Vector{Float64}}}
     # Keys are (src, dst), values are (c, sigma, last t)
-    process_parameter_estimates::Dict{Tuple{Int64, Int64}, Tuple{Float64, Float64, Float64}}
     effective_adj::Matrix{Float64}
     departed_time::Float64
     strategy::String
@@ -232,33 +223,23 @@ mutable struct AgentValues
     intention_log::Array{Int64, 1}
     sebs_gains::Tuple{Float64, Float64}
     # ER bits
-    projected_node_visit_times::Vector{PriorityQueue{Float64}}
-    # SH-AUM bits
-    max_gain_logs::Vector{Vector{Float64}}
-    # Auto-tuning
-    alpha::Float64
-    original_dr::Float64
-    original_adj_belief::Matrix{Float64}
+    projected_node_visit_times::Vector{PriorityQueue{Float64}} # This is used by RH-AUM as well
+    # RH-AUM bits
+    other_agent_announced_paths::Vector{Vector{Tuple{Int64, Float64}}}
+    utility_horizon::Float64
     # Comm failure
     comm_failure::Float64
     # Dynamics mode
     dyn_mode::String
 
     function AgentValues(n_agents::Int64, n_nodes::Int64, custom_config::UserConfig)
-        new(ones(Float64, (n_agents, n_nodes)) .* -9999, 
-            zeros(Float64, n_nodes), 
+        new( 
             zeros(Int64, n_agents),
             zeros(Float64, n_nodes),
-            zeros(Float64, n_nodes),
-            [0.0, 0.0],
-            [],
-            zeros(Float64, n_agents),
             n_agents,
             0,
             0,
             0,
-            0,
-            Dict(),
             Dict(),
             zeros(Float64, (n_nodes, n_nodes)),
             0,
@@ -267,9 +248,7 @@ mutable struct AgentValues
             (0.1, 100.0),
             [PriorityQueue{Float64, Float64}() for _ in 1:n_nodes],
             [[] for _ in 1:n_nodes],
-            -1.0,
-            0.0,
-            zeros(Float64, (n_nodes, n_nodes)),
+            40.0,
             0.0,
             "perfect")
 
@@ -413,6 +392,18 @@ struct GoingToMessage <: AbstractMessage
     message::Int64
 
     function GoingToMessage(agent::AgentState, targets::Union{Array{Int64, 1}, Nothing}, message::Int64)
+
+        new(agent.id, targets, message)
+    end
+end
+
+struct IntendedPathMessageRHAUM <: AbstractMessage
+    source::Int64
+    targets::Union{Array{Int64, 1}, Nothing}
+    # Each entry is (node ID, projected visit time)
+    message::Vector{Tuple{Int64, Float64}}
+
+    function IntendedPathMessage(agent::AgentState, targets::Union{Array{Int64, 1}, Nothing}, message::Vector{Tuple{Int64, Float64}})
 
         new(agent.id, targets, message)
     end
