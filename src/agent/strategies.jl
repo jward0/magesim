@@ -41,9 +41,6 @@ function make_decisions_SPNS!(agent::AgentState)
         c = mean(agent.world_state_belief.adj[agent.world_state_belief.adj .!= 0])
 
         adjacency_matrix = agent.world_state_belief.adj / c
-
-        # unnormalised_dists = dijkstra_shortest_paths(SimpleWeightedDiGraph(agent.world_state_belief.adj), agent.graph_position).dists
-        # distances = get_distances(agent.graph_position, agent.position, agent.world_state_belief)
         idlenesses = agent.values.idleness_log
 
         # Original
@@ -60,45 +57,6 @@ function make_decisions_SPNS!(agent::AgentState)
         priorities = model_out
         final_priorities = priorities
         
-
-        # Greedy-avoidant hijack
-        # final_priorities = idlenesses
-
-        # SH-AUM hijack
-
-        # point_to_point_gains::Matrix{Float64} = (agent.world_state_belief.adj .+ transpose(repeat(idlenesses, inner=[1, length(idlenesses)]))) ./ agent.world_state_belief.adj
-
-        # point_to_point_gains[isinf.(point_to_point_gains)] .= 0.0
-        # point_to_point_gains[isnan.(point_to_point_gains)] .= 0.0
-
-        # shaum_gains = (idlenesses .+ unnormalised_dists) ./ unnormalised_dists
-        # shaum_gains[agent.graph_position] = 0
-        # ns = get_neighbours(agent.graph_position, agent.world_state_belief, true)
-
-        # push!(agent.values.max_gain_logs[agent.graph_position], mean(shaum_gains[ns]))
-
-        # max_d = maximum(unnormalised_dists[ns])
-
-        # expected_gains = mean.(agent.values.max_gain_logs)
-        # expected_gains[isnan.(expected_gains)] .= mean(shaum_gains[ns])
-
-        # node_gains = [mean(point_to_point_gains[i, :][point_to_point_gains[i, :] .!= 0.0]) for i in 1:length(idlenesses)]
-
-        # graph_gain = mean(node_gains)
-
-        # # println("###############################")
-        # # println(node_gains[ns] .* (max_d .- unnormalised_dists)[ns])
-        # # println(mean(expected_gains) .* (max_d .- unnormalised_dists)[ns])
-        # # println(mean(shaum_gains[ns]) .* (max_d .- unnormalised_dists)[ns])
-        # # println("----------------------------------")
-        # # println(shaum_gains[ns] .* unnormalised_dists[ns])
-
-        # # shaum_utilities = shaum_gains .* unnormalised_dists
-        # # shaum_utilities = (shaum_gains .* unnormalised_dists)  .+ (mean(node_gains) .* (max_d .- unnormalised_dists))
-        # shaum_utilities = (shaum_gains .* unnormalised_dists)  .+ (mean(shaum_gains[ns]) .* (max_d .- unnormalised_dists))
-        # final_priorities = shaum_utilities
-        # END SH-AUM HIJACK
-
         target = do_sebs_style(agent, final_priorities)
 
 
@@ -115,14 +73,6 @@ function make_decisions_SPNS!(agent::AgentState)
 
     end
 end
-
-function distance_filter(taps, values)
-
-    taps = 1 .- (taps.-minimum(taps))/maximum(taps)
-
-    return taps .* values
-end
-
 
 function minimal_nn(data::Matrix{Float64})
 
@@ -237,54 +187,6 @@ function c1(input)
     return 0.15660883 * input
 end
 
-function do_psm(agent, self_priorities, adj)
-
-    # Currently NOT set up to handle non-infinite communication ranges
-    priority_mask = [float(agent.id > i) for i in 1:agent.values.n_agents_belief]
-
-    # Agent adjacency not an issue handling one agent at a time
-    unweighted_adj = copy(adj)
-    unweighted_adj[adj .!= 0.] .= 1.
-
-    # Division by 0 for self index is hidden by min
-    # Blanket division by n_agents is only valid for infinite comm range
-
-    normalised_agent_adjacency = priority_mask .* (min.(1 ./ agent.values.agent_dists_log, 10) ./ max(sum(priority_mask), 1))
-
-    self_contribution = self_priorities
-
-    next_contribution = softmax(agent.values.priority_log .* 10, dims=2) .* normalised_agent_adjacency
-    next_contribution = sum(next_contribution, dims=1)
-    convolved_next = leakyrelu(next_contribution' + unweighted_adj*next_contribution', 0.3)
-
-    # hardcoded k=3
-
-    convolved_next = leakyrelu(convolved_next + unweighted_adj*convolved_next, 0.3)
-    convolved_next = leakyrelu(convolved_next + unweighted_adj*convolved_next, 0.3)
-
-    return leakyrelu(self_contribution - convolved_next, 0.3)
-end
-
-function do_priority_greedy(agent::AgentState, self_priorities::Array{Float64, 1})
-
-    # Note that this can only work for homogeneous agent policies
-    # No guarantee of performance of behaviour otherwise
-
-    flags::Array{Float64, 1} = zeros(size(self_priorities))
-
-    for i in 1:size(agent.values.priority_log)[1]
-        if i != agent.id
-            flags .-= (self_priorities .< agent.values.priority_log[i, :]) * 999
-        end
-    end
-
-    if max(flags...) == -999
-        return self_priorities
-    end
-
-    return self_priorities .+ flags
-end
-
 function do_sebs_style(agent::AgentState, self_priorities::Array{Float64, 1})
 
     new_prio = copy(self_priorities)
@@ -306,12 +208,6 @@ function do_sebs_style(agent::AgentState, self_priorities::Array{Float64, 1})
     target = argmax(modified_prio)
 
     return target
-end
-
-function custom_regularise(factor::Float64, data::Array{Float64, 1})
-    out = data .- minimum(data) .+ eps(Float64)
-    out = out ./ (maximum(out)/factor)
-    return out
 end
 
 """

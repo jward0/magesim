@@ -26,3 +26,5 @@ Manifest.toml
 models/*
 logs/*
 __pycache__/
+maps/*
+configs/*
