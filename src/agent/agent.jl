@@ -252,8 +252,8 @@ end
 function astar_discount(start_time::Float64, arrival_time::Float64, end_time::Float64)
     # return 1 # No discount
     # return 1/(arrival_time - start_time) # "1/n" discount
-    # return 0.95 ^ (arrival_time - start_time) # x^n
-    return (end_time - arrival_time) / (end_time - start_time) # "linear" discount
+    return 0.95 ^ (arrival_time - start_time) # x^n
+    # return (end_time - arrival_time) / (end_time - start_time) # "linear" discount
 end
 
 end
