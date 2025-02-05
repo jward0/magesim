@@ -1,6 +1,6 @@
 module AgentHandler
 
-import ..Types: AgentState, WorldState, Position, StepTowardsAction, Config
+import ..Types: AgentState, WorldState, Position, StepTowardsAction, WaitAction, Config
 import ..Agent: agent_step!, make_decisions!, observe_world!
 import ..MessagePasser: pass_messages!
 
@@ -29,11 +29,16 @@ function spawn_agents(world::WorldState, config::Config)
             config.check_los, 
             config.custom_config)
 
-        agents[i].world_state_belief = world
-        agents[i].values.effective_adj = world.adj
+        # agents[i].world_state_belief = world
+        observe_world!(agents[i], world)
+        agents[i].values.effective_adj = copy(world.adj)
         agents[i].values.last_visited = start_nodes[i]
         agents[i].values.comm_failure = config.comm_failure
         agents[i].values.dyn_mode = config.custom_config.data["dyn_mode"]
+
+        if agents[i].values.strategy == "RHAUM"
+            enqueue!(agents[i].action_queue, WaitAction(i))
+        end
     end
 
     return agents
@@ -55,20 +60,27 @@ function step_agents!(agents::Array{AgentState, 1},
     # a single loop instead) as users may wish to insert message-passing steps between steps, and the
     # seperate loops give an easy way to achieve synchronicity
 
+
     if multithreaded
+
+        Threads.@threads for agent in agents
+            observe_world!(agent, world)
+        end
 
         pass_messages!(agents, world)
 
         Threads.@threads for agent in agents
-            observe_world!(agent, world)
-
             if force_actions != false
                 empty!(agent.action_queue)
                 enqueue!(agent.action_queue, StepTowardsAction(force_actions[agent.id]))
             else
                 make_decisions!(agent)
             end
+        end
 
+        pass_messages!(agents, world)
+    
+        for agent in agents
             agent_step!(agent, world, [agent.position for agent in agents[1:agent.id-1]])
         end
     
@@ -94,8 +106,6 @@ function step_agents!(agents::Array{AgentState, 1},
         end
     
     end
-
-    
 
 end
 

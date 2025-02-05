@@ -78,12 +78,9 @@ end
 
 # --- Agent action types ---
 
-struct WaitAction <: AbstractAction
-    field::Nothing
-
-    function WaitAction()
-        new(nothing)
-    end
+Base.@kwdef mutable struct WaitAction <: AbstractAction
+    # Default wait duration is 1 timestep
+    duration::Int64 = 1
 end
 
 struct MoveToAction <: AbstractAction
@@ -232,7 +229,7 @@ mutable struct AgentValues
     # Dynamics mode
     dyn_mode::String
 
-    function AgentValues(n_agents::Int64, n_nodes::Int64, custom_config::UserConfig)
+    function AgentValues(n_agents::Int64, n_nodes::Int64)
         new( 
             zeros(Int64, n_agents),
             zeros(Float64, n_nodes),
@@ -243,7 +240,7 @@ mutable struct AgentValues
             Dict(),
             zeros(Float64, (n_nodes, n_nodes)),
             0,
-            "SEBS",
+            "RHAUM",
             zeros(Int64, n_agents),
             (0.1, 100.0),
             [PriorityQueue{Float64, Float64}() for _ in 1:n_nodes],
@@ -271,26 +268,8 @@ mutable struct AgentState
 
     function AgentState(id::Int64, start_node_idx::Int64, start_node_pos::Position, n_agents::Int64, n_nodes::Int64, comm_range::Float64, check_los::Bool, custom_config::UserConfig)
 
-        values = AgentValues(n_agents, n_nodes, custom_config)
+        values = AgentValues(n_agents, n_nodes)
         new(id, start_node_pos, values, Queue{AbstractAction}(), start_node_idx, 1.0, comm_range, check_los, 10.0, Queue{AbstractMessage}(), Queue{AbstractMessage}(), nothing)    
-    end
-
-    function AgentState(
-        id::Int64,
-        position::Position,
-        values::AgentValues,
-        action_queue::Queue{AbstractAction},
-        graph_position::Union{AbstractEdge, Int64},
-        step_size::Float64,
-        comm_range::Float64,
-        check_los_flag::Bool,
-        sight_range::Float64,
-        inbox::Queue{AbstractMessage},
-        outbox::Queue{AbstractMessage},
-        world_state_belief::Union{WorldState, Nothing})
-
-        new(id, position, values, action_queue, graph_position, step_size, comm_range, check_los_flag, sight_range, inbox, outbox, world_state_belief)
-
     end
 end
 
@@ -403,7 +382,7 @@ struct IntendedPathMessageRHAUM <: AbstractMessage
     # Each entry is (node ID, projected visit time)
     message::Vector{Tuple{Int64, Float64}}
 
-    function IntendedPathMessage(agent::AgentState, targets::Union{Array{Int64, 1}, Nothing}, message::Vector{Tuple{Int64, Float64}})
+    function IntendedPathMessageRHAUM(agent::AgentState, targets::Union{Array{Int64, 1}, Nothing}, message::Vector{Tuple{Int64, Float64}})
 
         new(agent.id, targets, message)
     end

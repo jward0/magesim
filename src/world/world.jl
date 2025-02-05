@@ -47,7 +47,7 @@ function create_world(config::Config)
             end
             push!(sources, node.id)
             push!(destinations, neighbour.id)
-            push!(weights, ceil(pos_distance(node.position, neighbour.position)))
+            push!(weights, pos_distance(node.position, neighbour.position))
             # push!(weights, pos_distance(node.position, neighbour.position))
         end
     end

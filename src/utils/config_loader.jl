@@ -103,6 +103,12 @@ function load_configs(conf_arg::String, sweep_arg::String)
                     else
                         conf_dict["agent_starts"] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
                     end
+                elseif v == 16
+                    if conf_dict["world"] == "DIAG_floor1"
+                        conf_dict["agent_starts"] = [1, 4, 7, 10, 13, 16, 19, 22, 25, 28, 31, 34, 37, 40, 43, 46]
+                    else
+                        conf_dict["agent_starts"] = [range(1, v)...]
+                    end
                 else
                     conf_dict["agent_starts"] = [range(1, v)...]
                 end

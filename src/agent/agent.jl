@@ -32,10 +32,15 @@ function agent_step!(agent::AgentState, world::WorldState, blocked_pos::Array{Po
     action = first(agent.action_queue)
 
     if action isa WaitAction
-        # Do nothing for one timestep
+        # Do nothing for one timestep and then decrement wait duration
         new_pos = agent.position
         new_graph_pos = agent.graph_position
-        action_done = true
+        action.duration -= 1
+        if action.duration <= 0
+            action_done = true
+        else
+            action_done = false
+        end
     elseif action isa MoveToAction
         # Move towards target and do not pop action from queue until target reached
         new_pos, new_graph_pos, action_done = calculate_next_position(agent, action.target, world, blocked_pos)
@@ -121,6 +126,7 @@ function observe_world!(agent::AgentState, world::WorldState)
     # Read ArrivedAtNodeMessages to update idleness and intention logs
     while !isempty(agent.inbox)
         message = dequeue!(agent.inbox)
+
         if message isa ArrivedAtNodeMessageSEBS
             n = message.message[1]
             # +/-1 here to offset messages being sent on the other side of the idleness increment
@@ -130,7 +136,7 @@ function observe_world!(agent::AgentState, world::WorldState)
             # Min pool observed idleness with idleness from message
             agent.values.idleness_log = min.(agent.values.idleness_log, message.message)
         elseif message isa ArrivedAtNodeMessageSPNS
-            agent.values.idleness_log[message.message] = 0.0
+            agent.values.idleness_log[message.message] = 1.0
         elseif message isa GoingToMessage
             agent.values.other_targets[message.source] = message.message
         elseif message isa GoingToMessageER
@@ -147,19 +153,21 @@ function observe_world!(agent::AgentState, world::WorldState)
     end
 
     # Upon arrival at a node:
-    if isempty(agent.action_queue) && agent.graph_position isa Int64 && agent.graph_position <= world.n_nodes
+    if agent.graph_position isa Int64 && agent.graph_position <= world.n_nodes
         agent.values.idleness_log[agent.graph_position] = 0.0
+
         agent.values.last_last_visited = copy(agent.values.last_visited)
         agent.values.last_visited = agent.graph_position
 
-        # Update observed weights log
+        # # Update observed weights log
         t = convert(Float64, agent.world_state_belief.time)
-        src = agent.values.last_last_visited
-        dst = agent.values.last_visited
-        enqueue!(agent.outbox, ObservedWeightMessage(agent, nothing, ((dst, src), (t, t - agent.values.departed_time))))
-        if src != dst
-            update_effective_adj_decay!(agent, (src, dst), t - agent.values.departed_time)
-            
+        if t > 0.0
+            src = agent.values.last_last_visited
+            dst = agent.values.last_visited
+            enqueue!(agent.outbox, ObservedWeightMessage(agent, nothing, ((dst, src), (t, t - agent.values.departed_time))))
+            if src != dst
+                update_effective_adj_decay!(agent, (src, dst), t - agent.values.departed_time)
+            end
         end
     end
 
@@ -197,6 +205,8 @@ function make_decisions!(agent::AgentState)
         make_decisions_SPNS!(agent)
     elseif agent.values.strategy == "ER"
         make_decisions_ER!(agent)
+    elseif agent.values.strategy == "RHAUM"
+        make_decisions_RHAUM!(agent)
     elseif agent.values.strategy == "visitmaxing"
         visit_maximisation!(agent)
     end
