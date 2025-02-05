@@ -1,6 +1,6 @@
 module Agent
 
-import ..Types: AgentState, WorldState, Position, AbstractAction, WaitAction, MoveToAction, StepTowardsAction, ArrivedAtNodeMessageSEBS, ArrivedAtNodeMessageSPNS, GoingToMessageER, ObservedWeightMessage, IdlenessLogMessage, PriorityMessage, PosMessage, GoingToMessage
+import ..Types: AgentState, WorldState, Position, AbstractAction, WaitAction, MoveToAction, StepTowardsAction, ArrivedAtNodeMessageSEBS, ArrivedAtNodeMessageSPNS, GoingToMessageER, ObservedWeightMessage, IdlenessLogMessage, PriorityMessage, PosMessage, GoingToMessage, IntendedPathMessageRHAUM
 import ..AgentDynamics: calculate_next_position
 import ..Utils: get_neighbours, pos_distance, get_distances
 # import ..Strategies: make_decisions_SPNS!, make_decisions_SEBS!
@@ -121,11 +121,9 @@ function observe_world!(agent::AgentState, world::WorldState)
     # Read ArrivedAtNodeMessages to update idleness and intention logs
     while !isempty(agent.inbox)
         message = dequeue!(agent.inbox)
-        agent.values.n_messages += 1
         if message isa ArrivedAtNodeMessageSEBS
             n = message.message[1]
             # +/-1 here to offset messages being sent on the other side of the idleness increment
-            agent.values.last_terminal_idlenesses[n] = copy(agent.values.idleness_log[n] - 1.0)
             agent.values.idleness_log[n] = 1.0
             agent.values.intention_log[message.source] = message.message[2]
         elseif message isa IdlenessLogMessage
@@ -140,6 +138,8 @@ function observe_world!(agent::AgentState, world::WorldState)
             arrival_time = message.message[2]
             agent.values.intention_log[message.source] = target
             agent.values.projected_node_visit_times[target][arrival_time] = arrival_time
+        elseif message isa IntendedPathMessageRHAUM
+            agent.values.other_agent_announced_paths[message.source] = message.message
         elseif message isa ObservedWeightMessage
             ((src, dst), (ts, w)) = message.message
             update_communicated_weights_decay!(agent, (src, dst), w)
@@ -148,7 +148,6 @@ function observe_world!(agent::AgentState, world::WorldState)
 
     # Upon arrival at a node:
     if isempty(agent.action_queue) && agent.graph_position isa Int64 && agent.graph_position <= world.n_nodes
-        agent.values.last_terminal_idlenesses[agent.graph_position] = copy(agent.values.idleness_log[agent.graph_position])
         agent.values.idleness_log[agent.graph_position] = 0.0
         agent.values.last_last_visited = copy(agent.values.last_visited)
         agent.values.last_visited = agent.graph_position

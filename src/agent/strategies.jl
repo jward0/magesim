@@ -359,3 +359,7 @@ function er_utility(node::Int64, agent::AgentState)
 
     return abs(t_next - t_expected) / distance
 end
+
+function make_decisions_RHAUM!(agent::AgentState)
+    pass
+end
