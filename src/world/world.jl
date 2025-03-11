@@ -70,6 +70,12 @@ function create_world(config::Config)
         throw("Unrecognised temporal profile generation type (must be \"generate\", \"load\", or \"none\")")
     end
 
+    if true
+        # Bristol bits
+        adj = convert(Matrix{Float64}, load("bristol_3_base_adj.jld")["data"])
+        temporal_profiles = [1.0 ./ t for t in temporal_profiles]
+    end
+
     @reset world_state.adj=adj
     @reset world_state.temporal_profiles=temporal_profiles
 

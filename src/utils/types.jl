@@ -67,6 +67,7 @@ struct Logger
             println(f, "n_agents: $(config.n_agents)")
             println(f, "agent_starts: $(config.agent_starts)")
             println(f, "comm_range: $(config.comm_range)")
+            println(f, "comm_failure: $(config.comm_failure)")
             println(f, "check_los: $(config.check_los)")
             println(f, "timeout: $(config.timeout)")
             println(f, "custom_config: $(config.custom_config)")
@@ -240,7 +241,7 @@ mutable struct AgentValues
             Dict(),
             zeros(Float64, (n_nodes, n_nodes)),
             0,
-            "RHAUM",
+            "SEBS",
             zeros(Int64, n_agents),
             (0.1, 100.0),
             [PriorityQueue{Float64, Float64}() for _ in 1:n_nodes],

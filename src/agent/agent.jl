@@ -65,19 +65,25 @@ function update_communicated_weights_decay!(agent::AgentState, edge::Tuple{Int64
 
     decay = true
 
+    assume_symmetry = true
+
     # delta rule
     if !decay
         delta = 0.2
         old_w = agent.values.effective_adj[edge...]
         new_w = old_w + delta*(w - old_w)
         agent.values.effective_adj[edge...] = new_w
-        agent.values.effective_adj[reverse(edge)...] = new_w
+        if assume_symmetry
+            agent.values.effective_adj[reverse(edge)...] = new_w
+        end
     end
 
     # decay rule
     if decay
         agent.values.effective_adj[edge...] = w
-        agent.values.effective_adj[reverse(edge)...] = w
+        if assume_symmetry
+            agent.values.effective_adj[reverse(edge)...] = w
+        end
     end
 
 end
@@ -85,6 +91,7 @@ end
 function update_effective_adj_decay!(agent::AgentState, visited_edge::Tuple{Int64, Int64}, observed_w::Float64)
 
     decay = true
+    assume_symmetry = true
 
     # ~~~ delta rule
     if !decay
@@ -97,17 +104,20 @@ function update_effective_adj_decay!(agent::AgentState, visited_edge::Tuple{Int6
         # SIMPLE MONITORING (A=0) HAS DELTA = 1.0
         # NORMAL DECAY RULE HAS 0.975
 
-        # decay_constant = 1.0
-        decay_constant = 0.975
+        # decay = 1.0
+        decay = 0.975
+
         mask = findall(iszero, agent.values.effective_adj)
 
         mean_w = mean(agent.values.effective_adj[findall(!iszero, agent.values.effective_adj)])
-        agent.values.effective_adj = (decay_constant .* (agent.values.effective_adj .- mean_w)) .+ mean_w
+        agent.values.effective_adj = (decay .* (agent.values.effective_adj .- mean_w)) .+ mean_w
 
         agent.values.effective_adj[mask] .= 0.0
 
         agent.values.effective_adj[visited_edge...] = observed_w
-        agent.values.effective_adj[reverse(visited_edge)...] = observed_w
+        if assume_symmetry
+            agent.values.effective_adj[reverse(visited_edge)...] = observed_w
+        end
 
     end
 
@@ -177,8 +187,12 @@ function make_decisions!(agent::AgentState)
 
     if agent.values.dyn_mode == "perfect"
         tp = agent.world_state_belief.temporal_profiles[floor(Integer, agent.world_state_belief.time)+1]
+        # ONLY DO IF BRISTOL (DUE TO ADJ FUDGING)
+        tp ./= agent.world_state_belief.temporal_profiles[1]
         new_effective_adj = ceil.(agent.world_state_belief.adj ./ tp)
+        
         new_effective_adj[isnan.(new_effective_adj)] .= 0.0
+        
     elseif agent.values.dyn_mode == "active"
         new_effective_adj = agent.values.effective_adj
     end
