@@ -7,6 +7,8 @@ using Graphs, SimpleWeightedGraphs
 using JSON
 using JLD
 using Accessors
+using Random
+using Distributions
 
 """
     create_world(fpath::String)
@@ -70,13 +72,44 @@ function create_world(config::Config)
         throw("Unrecognised temporal profile generation type (must be \"generate\", \"load\", or \"none\")")
     end
 
-    if true
+    if false
         # Bristol bits
-        adj = convert(Matrix{Float64}, load("bristol_3_base_adj.jld")["data"])
-        temporal_profiles = [1.0 ./ t for t in temporal_profiles]
+        # adj = convert(Matrix{Float64}, load("bristol_3_base_adj.jld")["data"])
+        # adj = convert(Matrix{Float64}, load("bristol_3_new_base.jld")["data"])
+        adj = convert(Matrix{Float64}, load("bristol_adj_bits/trimmed_base.jld")["data"])
+        # temporal_profiles = [1.0 ./ t for t in temporal_profiles]
     end
 
-    @reset world_state.adj=adj
+    if false
+        # apply prior inaccuracy to adj belief
+        Random.seed!(123)
+        d = Normal(1.0, 1.6)
+        td = truncated(d, 0.0, Inf)
+        noise = rand(td, size(adj))
+
+        for i in 1:size(adj)[1]
+            for j in 1:size(adj)[1]
+                noise[j, i] = noise[i, j]
+            end
+        end
+
+        adj .*= noise
+
+        # Force all Random
+
+        # mask = findall(iszero, adj)
+        # adj = rand(size(adj)...) .* 20
+        # adj[mask] .= 0
+
+        # mask = findall(iszero, adj)
+        # adj = ones(size(adj)) .* 10.0
+        # adj[mask] .= 0
+    end
+
+
+    # TEMP CEIL
+
+    @reset world_state.adj=ceil.(adj)
     @reset world_state.temporal_profiles=temporal_profiles
 
     return world_state
