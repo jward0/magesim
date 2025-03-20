@@ -67,6 +67,8 @@ function update_communicated_weights_decay!(agent::AgentState, edge::Tuple{Int64
 
     assume_symmetry = true
 
+    t = agent.world_state_belief.time
+
     # delta rule
     if !decay
         delta = 0.2
@@ -81,8 +83,10 @@ function update_communicated_weights_decay!(agent::AgentState, edge::Tuple{Int64
     # decay rule
     if decay
         agent.values.effective_adj[edge...] = w
+        agent.values.last_edge_visits[edge...] = t
         if assume_symmetry
             agent.values.effective_adj[reverse(edge)...] = w
+            agent.values.last_edge_visits[reverse(edge)...] = t
         end
     end
 
@@ -104,19 +108,46 @@ function update_effective_adj_decay!(agent::AgentState, visited_edge::Tuple{Int6
         # SIMPLE MONITORING (A=0) HAS DELTA = 1.0
         # NORMAL DECAY RULE HAS 0.975
 
-        # decay = 1.0
-        decay = 0.975
+        # ORIGINAL DECAY
+        # if agent.values.dyn_mode == "simple"
+        #     decay = 1.0
+        # else
+        #     decay = 0.975
+        # end
 
-        mask = findall(iszero, agent.values.effective_adj)
+        # mask = findall(iszero, agent.values.effective_adj)
 
-        mean_w = mean(agent.values.effective_adj[findall(!iszero, agent.values.effective_adj)])
-        agent.values.effective_adj = (decay .* (agent.values.effective_adj .- mean_w)) .+ mean_w
+        # mean_w = mean(agent.values.effective_adj[findall(!iszero, agent.values.effective_adj)])
+        # agent.values.effective_adj = (decay .* (agent.values.effective_adj .- mean_w)) .+ mean_w
 
-        agent.values.effective_adj[mask] .= 0.0
+        # agent.values.effective_adj[mask] .= 0.0
+
+        # # TIME-DEPENDENT DECAY
+        if agent.values.dyn_mode == "simple"
+            factor = 1.0
+        else
+            # factor = 0.99925
+            factor = 0.9975
+        
+            time_deltas = agent.world_state_belief.time .- agent.values.last_edge_visits
+            # required for proper iterative decay
+            effective_time_deltas = min.(time_deltas, observed_w)
+            decays = factor .^ effective_time_deltas
+
+            mask = findall(iszero, agent.values.effective_adj)
+
+            mean_w = mean(agent.values.effective_adj[findall(!iszero, agent.values.effective_adj)])
+            agent.values.effective_adj = (decays .* (agent.values.effective_adj .- mean_w))  .+ mean_w
+            # agent.values.effective_adj = (decay .* (agent.values.effective_adj .- mean_w)) .+ mean_w
+            
+            agent.values.effective_adj[mask] .= 0.0
+        end
 
         agent.values.effective_adj[visited_edge...] = observed_w
+        agent.values.last_edge_visits[visited_edge...] = agent.world_state_belief.time
         if assume_symmetry
             agent.values.effective_adj[reverse(visited_edge)...] = observed_w
+            agent.values.last_edge_visits[reverse(visited_edge)...] = agent.world_state_belief.time
         end
 
     end
@@ -187,13 +218,14 @@ function make_decisions!(agent::AgentState)
 
     if agent.values.dyn_mode == "perfect"
         tp = agent.world_state_belief.temporal_profiles[floor(Integer, agent.world_state_belief.time)+1]
-        # ONLY DO IF BRISTOL (DUE TO ADJ FUDGING)
-        tp ./= agent.world_state_belief.temporal_profiles[1]
         new_effective_adj = ceil.(agent.world_state_belief.adj ./ tp)
         
         new_effective_adj[isnan.(new_effective_adj)] .= 0.0
+
+        # BRISTOL ONLY
+        # new_effective_adj = agent.values.secret_knowledge[floor(Integer, agent.world_state_belief.time)+1]
         
-    elseif agent.values.dyn_mode == "active"
+    elseif agent.values.dyn_mode == "active" || agent.values.dyn_mode == "simple" || agent.values.dyn_mode in ["1", "2", "3", "4", "5"] 
         new_effective_adj = agent.values.effective_adj
     end
 
@@ -212,6 +244,10 @@ function make_decisions!(agent::AgentState)
 
     # otherwise
     # new_effective_adj = agent.values.effective_adj
+
+    # println("+++++++++++++++++++++++++++++++++++++++")
+    # println(agent.world_state_belief.adj)
+    # println(agent.values.secret_knowledge[floor(Integer, agent.world_state_belief.time)+1])
 
     if agent.values.strategy == "SEBS"
         make_decisions_SEBS!(agent)

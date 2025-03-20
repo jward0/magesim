@@ -40,6 +40,7 @@ mutable struct Config
     comm_range::Float64
     comm_failure::Float64
     check_los::Bool
+    strategy::String
     # Run configs
     headless::Bool
     speedup::Float64
@@ -70,6 +71,7 @@ struct Logger
             println(f, "comm_failure: $(config.comm_failure)")
             println(f, "check_los: $(config.check_los)")
             println(f, "timeout: $(config.timeout)")
+            println(f, "strategy: $(config.strategy)")
             println(f, "custom_config: $(config.custom_config)")
         end
 
@@ -229,6 +231,8 @@ mutable struct AgentValues
     comm_failure::Float64
     # Dynamics mode
     dyn_mode::String
+    secret_knowledge::Vector{Matrix{Float64}}
+    last_edge_visits::Matrix{Float64}
 
     function AgentValues(n_agents::Int64, n_nodes::Int64)
         new( 
@@ -241,14 +245,15 @@ mutable struct AgentValues
             Dict(),
             zeros(Float64, (n_nodes, n_nodes)),
             0,
-            "SEBS",
+            "ER",
             zeros(Int64, n_agents),
             (0.1, 100.0),
             [PriorityQueue{Float64, Float64}() for _ in 1:n_nodes],
             [[] for _ in 1:n_nodes],
             40.0,
             0.0,
-            "perfect")
+            "perfect",
+            [])
 
     end
 end

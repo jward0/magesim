@@ -5,6 +5,7 @@ import ..Agent: agent_step!, make_decisions!, observe_world!
 import ..MessagePasser: pass_messages!
 
 using DataStructures
+using JLD
 
 """
     spawn_agents(agent_count::Int64, start_nodes::Array{Int64, 1}, world::WorldState)
@@ -35,6 +36,11 @@ function spawn_agents(world::WorldState, config::Config)
         agents[i].values.last_visited = start_nodes[i]
         agents[i].values.comm_failure = config.comm_failure
         agents[i].values.dyn_mode = config.custom_config.data["dyn_mode"]
+        agents[i].values.last_edge_visits = zeros(world.n_nodes, world.n_nodes)
+        agents[i].values.strategy = config.strategy
+        # BRISTOL ONLY
+        # EXTREMELY BAD
+        # agents[i].values.secret_knowledge = load("secret_knowledge.jld")["data"]
 
         if agents[i].values.strategy == "RHAUM"
             enqueue!(agents[i].action_queue, WaitAction(i))

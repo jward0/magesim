@@ -143,6 +143,7 @@ function process_config_dict(config_dict::Dict{String, Any})
     comm_range::Float64 = config_dict["comm_range"]
     comm_failure::Float64 = config_dict["comm_failure"]
     check_los::Bool = config_dict["check_los"]
+    strategy::String = config_dict["strategy"]
 
     # Custom config loading
     custom_config::UserConfig = UserConfig(config_dict["custom_config"])
@@ -157,6 +158,7 @@ function process_config_dict(config_dict::Dict{String, Any})
         comm_range,
         comm_failure,
         check_los,
+        strategy,
         headless,
         speedup,
         timeout,

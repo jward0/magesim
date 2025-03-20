@@ -76,7 +76,7 @@ function create_world(config::Config)
         # Bristol bits
         # adj = convert(Matrix{Float64}, load("bristol_3_base_adj.jld")["data"])
         # adj = convert(Matrix{Float64}, load("bristol_3_new_base.jld")["data"])
-        adj = convert(Matrix{Float64}, load("bristol_adj_bits/trimmed_base.jld")["data"])
+        adj = convert(Matrix{Float64}, load("bristol_base_adj.jld")["data"])
         # temporal_profiles = [1.0 ./ t for t in temporal_profiles]
     end
 
