@@ -458,10 +458,11 @@ end
 
 function step_reward(start_time::Float64, end_time::Float64, current_time::Float64, idleness::Float64, weight::Float64, self_visits::Vector{Float64}, other_visits::Vector{Float64})
 
-    remaining_horizon = end_time - (current_time + weight)
+    # remaining_horizon = end_time - (current_time + weight)
     horizon = end_time - start_time
 
     alpha = current_time - idleness
+    beta = end_time
     arrival_time = current_time + weight
 
     visits = sort([self_visits; other_visits])
@@ -469,10 +470,12 @@ function step_reward(start_time::Float64, end_time::Float64, current_time::Float
     for visit in visits
         if visit <= arrival_time && visit > alpha
             alpha = visit
+        # elseif visit >= arrival_time && visit < beta
+        #     beta = visit
         end
     end
 
-    raw_reward = (arrival_time - alpha) * remaining_horizon
+    raw_reward = (arrival_time - alpha) * (beta - arrival_time)
     discount_factor = astar_discount(start_time, arrival_time, end_time)
 
     return raw_reward * discount_factor
@@ -511,4 +514,83 @@ end
 
 function astar_discount(start_time::Float64, arrival_time::Float64, end_time::Float64)
     return 0.95 ^ (arrival_time - start_time) # x^n
+end
+
+function DTAP_utility(agent::AgentState, target::Int64)
+
+    idleness_term = agent.values.idleness_log[target]
+    travel_term = get_distances(agent.graph_position, agent.position, agent.world_state_belief)[target]
+    distance_from_start_term = agent.world_state_belief.paths.dists[agent.values.dtap_start, target]
+
+    return sum(agent.values.dtap_utility_gains .* [idleness_term, travel_term, distance_from_start_term])
+end
+
+function DTAP_calculate_bid(agent::AgentState, target::Int64)
+
+    central_node = 0
+    central_node_cost = ∞
+
+    for task in agent.values.dtap_agent_tasks
+        cost = 0
+        for task_ in agent.values.dtap_agent_tasks
+            cost += agent.world_state_belief.paths.dists[task, task_]
+        end
+        if cost < central_node_cost
+            central_node = task
+            central_node_cost = cost
+        end
+    end
+
+    travel_cost = agent.world_state_belief.paths.dists[central_node, target]
+
+    return travel_cost * length(agent.values.dtap_agent_tasks)
+end
+
+function make_decisions_DTAP!(agent::AgentState, agents::AgentState)
+
+    timeout = 1
+
+    if isempty(agent.action_queue)
+
+        node_utilities = [DTAP_utility(agent, target) for target in agent.values.dtap_available_tasks]
+
+        while true
+
+            target = agent.values.dtap_available_tasks[argmax(node_utilities)]
+            deleteat!(agent.values.dtap_available_tasks, findall(x->x==target, agent.values.dtap_available_tasks))
+
+            # Spoof the bid collecting process by exposing all agents
+            bids = [DTAP_calculate_bid(a, target) for a in agents]
+
+            message_failed = false
+
+            for i in 1:length(agents)
+                if rand() < 1 - (1 - agent.values.comm_failure)^2 # One or both messages failed
+                    bids[i] =  ∞   
+                    message_failed = true                
+                end
+            end
+            # Provisional - have to think about how appropriate this is
+            if message_failed
+                enqueue!(agent.action_queue, WaitAction(timeout))
+            end
+
+            # push!(agents[argmin(bids)].values.dtap_agent_tasks, target)
+
+            if argmin(bids) == agent.id
+                agent.values.dtap_available_tasks = [i for i in 1:agent.world_state_belief.n_nodes]
+                push!(agent.values.dtap_agent_tasks, target)
+                enqueue!(agent.action_queue, MoveToAction(target))
+                break
+            else
+                deleteat!(agent.values.dtap_agent_tasks, findall(x->x==target, agent.values.dtap_agent_tasks))
+            end
+
+            if isempty(agent.values.dtap_tasks)
+                agent.values.dtap_available_tasks = [i for i in 1:agent.world_state_belief.n_nodes]
+            end
+        end
+
+        enqueue!(agent.outbox, IdlenessLogMessage(agent, nothing, agent.values.idleness_log))
+    end
 end

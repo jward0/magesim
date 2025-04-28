@@ -227,6 +227,11 @@ mutable struct AgentValues
     # RH-AUM bits
     other_agent_announced_paths::Vector{Vector{Tuple{Int64, Float64}}}
     utility_horizon::Float64
+    # DTAP bits
+    dtap_utility_gains::Tuple{Float64, Float64, Float64}
+    dtap_agent_tasks::Vector{Int64}
+    dtap_available_tasks::Vector{Int64}
+    dtap_start::Int64
     # Comm failure
     comm_failure::Float64
     # Dynamics mode
@@ -251,6 +256,10 @@ mutable struct AgentValues
             [PriorityQueue{Float64, Float64}() for _ in 1:n_nodes],
             [[] for _ in 1:n_nodes],
             40.0,
+            (1.0, -0.75, -5.0), # idleness, navigation, distance_from_origin
+            [i for i in 1:n_nodes],
+            [],
+            0,
             0.0,
             "perfect",
             [])

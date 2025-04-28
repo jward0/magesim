@@ -214,7 +214,7 @@ function observe_world!(agent::AgentState, world::WorldState)
 
 end
 
-function make_decisions!(agent::AgentState)
+function make_decisions!(agent::AgentState, agents::Vector{AgentState})
 
     if agent.values.dyn_mode == "perfect"
         tp = agent.world_state_belief.temporal_profiles[floor(Integer, agent.world_state_belief.time)+1]
@@ -257,6 +257,8 @@ function make_decisions!(agent::AgentState)
         make_decisions_ER!(agent)
     elseif agent.values.strategy == "RHAUM"
         make_decisions_RHAUM!(agent)
+    elseif agent.values.strategy == "DTAP"
+        make_decisions_DTAP!(agent, agents)
     elseif agent.values.strategy == "visitmaxing"
         visit_maximisation!(agent)
     end

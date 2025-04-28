@@ -38,6 +38,8 @@ function spawn_agents(world::WorldState, config::Config)
         agents[i].values.dyn_mode = config.custom_config.data["dyn_mode"]
         agents[i].values.last_edge_visits = zeros(world.n_nodes, world.n_nodes)
         agents[i].values.strategy = config.strategy
+        # DTAP
+        agents[i].values.dtap_start = start_nodes[i]
         # BRISTOL ONLY
         # EXTREMELY BAD
         # agents[i].values.secret_knowledge = load("secret_knowledge.jld")["data"]
@@ -80,7 +82,7 @@ function step_agents!(agents::Array{AgentState, 1},
                 empty!(agent.action_queue)
                 enqueue!(agent.action_queue, StepTowardsAction(force_actions[agent.id]))
             else
-                make_decisions!(agent)
+                make_decisions!(agent, agents)
             end
         end
 
@@ -103,7 +105,7 @@ function step_agents!(agents::Array{AgentState, 1},
                 empty!(agent.action_queue)
                 enqueue!(agent.action_queue, StepTowardsAction(force_actions[agent.id]))
             else
-                make_decisions!(agent)
+                make_decisions!(agent, agents)
             end
         end
     
