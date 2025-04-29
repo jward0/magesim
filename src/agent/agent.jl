@@ -9,6 +9,7 @@ using Accessors
 using DataStructures
 using Graphs, SimpleWeightedGraphs, SparseArrays, LinearAlgebra
 using LinearAlgebra
+using Infinity
 using Optim
 using Statistics
 using Flux

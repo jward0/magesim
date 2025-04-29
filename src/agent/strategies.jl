@@ -541,23 +541,40 @@ function DTAP_calculate_bid(agent::AgentState, target::Int64)
         end
     end
 
+    # Important error catch for when agents have no tasks allocated
+    # if central_node == 0
+    #     return 0
+    # end
+
     travel_cost = agent.world_state_belief.paths.dists[central_node, target]
 
     return travel_cost * length(agent.values.dtap_agent_tasks)
 end
 
-function make_decisions_DTAP!(agent::AgentState, agents::AgentState)
+function make_decisions_DTAP!(agent::AgentState, agents::Vector{AgentState})
 
     timeout = 1
 
     if isempty(agent.action_queue)
 
-        node_utilities = [DTAP_utility(agent, target) for target in agent.values.dtap_available_tasks]
+        # node_utilities = [DTAP_utility(agent, target) for target in agent.values.dtap_available_tasks]
+
+        # Do not attempt to move to own node
+        deleteat!(agent.values.dtap_available_tasks, findall(x->x==agent.graph_position, agent.values.dtap_available_tasks))
 
         while true
 
+            node_utilities = [DTAP_utility(agent, target) for target in agent.values.dtap_available_tasks]
             target = agent.values.dtap_available_tasks[argmax(node_utilities)]
             deleteat!(agent.values.dtap_available_tasks, findall(x->x==target, agent.values.dtap_available_tasks))
+
+            # If fewer than 2 tasks allocated to agent, force
+            if length(agent.values.dtap_agent_tasks) < 2
+                agent.values.dtap_available_tasks = [i for i in 1:agent.world_state_belief.n_nodes]
+                push!(agent.values.dtap_agent_tasks, target)
+                enqueue!(agent.action_queue, MoveToAction(target))
+                break               
+            end
 
             # Spoof the bid collecting process by exposing all agents
             bids = [DTAP_calculate_bid(a, target) for a in agents]
@@ -577,16 +594,16 @@ function make_decisions_DTAP!(agent::AgentState, agents::AgentState)
 
             # push!(agents[argmin(bids)].values.dtap_agent_tasks, target)
 
+            deleteat!(agent.values.dtap_agent_tasks, findall(x->x==target, agent.values.dtap_agent_tasks))
+
             if argmin(bids) == agent.id
                 agent.values.dtap_available_tasks = [i for i in 1:agent.world_state_belief.n_nodes]
                 push!(agent.values.dtap_agent_tasks, target)
                 enqueue!(agent.action_queue, MoveToAction(target))
                 break
-            else
-                deleteat!(agent.values.dtap_agent_tasks, findall(x->x==target, agent.values.dtap_agent_tasks))
             end
 
-            if isempty(agent.values.dtap_tasks)
+            if isempty(agent.values.dtap_available_tasks)
                 agent.values.dtap_available_tasks = [i for i in 1:agent.world_state_belief.n_nodes]
             end
         end

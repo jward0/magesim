@@ -256,9 +256,9 @@ mutable struct AgentValues
             [PriorityQueue{Float64, Float64}() for _ in 1:n_nodes],
             [[] for _ in 1:n_nodes],
             40.0,
-            (1.0, -0.75, -5.0), # idleness, navigation, distance_from_origin
-            [i for i in 1:n_nodes],
+            (1.0, -0.75, 0.0), # idleness, navigation, distance_from_origin
             [],
+            [i for i in 1:n_nodes],
             0,
             0.0,
             "perfect",

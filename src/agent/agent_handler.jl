@@ -40,6 +40,8 @@ function spawn_agents(world::WorldState, config::Config)
         agents[i].values.strategy = config.strategy
         # DTAP
         agents[i].values.dtap_start = start_nodes[i]
+        # Necessary fudge for bid calculation
+        push!(agents[i].values.dtap_agent_tasks, start_nodes[i])
         # BRISTOL ONLY
         # EXTREMELY BAD
         # agents[i].values.secret_knowledge = load("secret_knowledge.jld")["data"]
