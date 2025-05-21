@@ -253,13 +253,17 @@ function make_decisions!(agent::AgentState, agents::Vector{AgentState})
     if agent.values.strategy == "SEBS"
         make_decisions_SEBS!(agent)
     elseif agent.values.strategy == "SPNS"
-        make_decisions_SPNS!(agent)
+        make_decisions_SPNS!(agent, "full")
+    elseif agent.values.strategy == "MNS"
+        make_decisions_SPNS!(agent, "minimal")
     elseif agent.values.strategy == "ER"
         make_decisions_ER!(agent)
     elseif agent.values.strategy == "RHAUM"
         make_decisions_RHAUM!(agent)
     elseif agent.values.strategy == "DTAP"
         make_decisions_DTAP!(agent, agents)
+    elseif agent.values.strategy == "CRA"
+        make_decisions_CRA!(agent)
     elseif agent.values.strategy == "visitmaxing"
         visit_maximisation!(agent)
     end

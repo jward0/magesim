@@ -28,11 +28,38 @@ function visit_maximisation!(agent::AgentState)
 end
 
 """
+    make_decisions_CRA!(agent::AgentState)
+
+Does CR-avoidant
+"""
+function make_decisions_CRA!(agent::AgentState)
+
+    message_received = false
+
+    if isempty(agent.action_queue)
+
+        target = do_sebs_style(agent, agent.values.idleness_log)
+
+        enqueue!(agent.action_queue, MoveToAction(target))
+
+        enqueue!(agent.outbox, IdlenessLogMessage(agent, nothing, agent.values.idleness_log))
+        enqueue!(agent.outbox, GoingToMessage(agent, nothing, target))
+
+        agent.values.current_target = target
+
+        if agent.graph_position isa Int64
+            agent.values.departed_time = agent.world_state_belief.time
+        end
+
+    end
+end
+
+"""
     make_decisions_SPNS!(agent::AgentState)
 
 Does SPNS
 """
-function make_decisions_SPNS!(agent::AgentState)
+function make_decisions_SPNS!(agent::AgentState, mode::String)
 
     message_received = false
 
@@ -49,10 +76,12 @@ function make_decisions_SPNS!(agent::AgentState)
 
         node_values = hcat(idlenesses/maximum(idlenesses), distances/maximum(distances))
 
-        model_in = [node_values, adjacency_matrix]
-
-        # model_out = vec(forward_nn(model_in))
-        model_out = vec(minimal_nn(node_values))
+        if mode == "full"
+            model_in = [node_values, adjacency_matrix]
+            model_out = vec(forward_nn(model_in))
+        else
+            model_out = vec(minimal_nn(node_values))
+        end
 
         priorities = model_out
         final_priorities = priorities
