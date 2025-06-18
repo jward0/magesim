@@ -39,7 +39,7 @@ function load_configs(conf_arg::String, sweep_arg::String)
                     elseif conf_dict["world"] == "grid"
                         conf_dict["agent_starts"] = [13]
                     elseif conf_dict["world"] == "cumberland"
-                        conf_dict["agent_starts"] = [25]
+                        conf_dict["agent_starts"] = [18]
                     else
                         conf_dict["agent_starts"] = [1]
                     end
@@ -51,7 +51,7 @@ function load_configs(conf_arg::String, sweep_arg::String)
                     elseif conf_dict["world"] == "grid"
                         conf_dict["agent_starts"] = [7, 19]
                     elseif conf_dict["world"] == "cumberland"
-                        conf_dict["agent_starts"] = [7, 25]
+                        conf_dict["agent_starts"] = [7, 29]
                     else
                         conf_dict["agent_starts"] = [1, 2]
                     end
@@ -106,6 +106,12 @@ function load_configs(conf_arg::String, sweep_arg::String)
                 elseif v == 16
                     if conf_dict["world"] == "DIAG_floor1"
                         conf_dict["agent_starts"] = [1, 4, 7, 10, 13, 16, 19, 22, 25, 28, 31, 34, 37, 40, 43, 46]
+                    elseif conf_dict["world"] == "example"
+                        conf_dict["agent_starts"] = [2, 4, 6, 9, 10, 11, 13, 17, 18, 19, 21, 23, 25, 27, 28, 29]
+                    elseif conf_dict["world"] == "grid"
+                        conf_dict["agent_starts"] = [1, 2, 3, 4, 5, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21]
+                    elseif conf_dict["world"] == "cumberland"
+                        conf_dict["agent_starts"] = [1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31]
                     else
                         conf_dict["agent_starts"] = [range(1, v)...]
                     end

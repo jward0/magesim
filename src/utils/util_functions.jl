@@ -19,6 +19,10 @@ function operate_pos(p::Position, n::Number, f)
     return Position(f(p.x, n), f(p.y, n))
 end
 
+function get_distances(agent::AgentState, world::WorldState)
+    return get_distances(agent.graph_position, agent.position, world)
+end
+
 function get_distances(agent_graph_pos::Int64, agent_pos::Position, world::WorldState)
     return [world.paths.dists[agent_graph_pos, node.id] for node in world.nodes[1:world.n_nodes]]
 end

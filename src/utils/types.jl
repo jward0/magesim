@@ -51,6 +51,35 @@ mutable struct Config
     custom_config::UserConfig
 end
 
+struct afLogger
+    log_directory::String
+
+    function afLogger(config::Config, i::Integer)
+
+        log_directory = string("/home/james/Desktop/000_thesis_magesim_results/adversarial_format_idleness/$(config.strategy)/$(config.world_name)/$(config.n_agents)_agent$(config.n_agents > 1 ? "s" : "")/$(i)")
+
+        if !isdir(log_directory)
+            Base.Filesystem.mkpath(log_directory)
+            Base.Filesystem.mkpath("$(log_directory)/distances/")
+        end
+
+        fpath = "$(log_directory)/config.txt" 
+        open(fpath, "a") do f
+            println(f, "world: $(config.world_fpath)")
+            println(f, "n_agents: $(config.n_agents)")
+            println(f, "agent_starts: $(config.agent_starts)")
+            println(f, "comm_range: $(config.comm_range)")
+            println(f, "comm_failure: $(config.comm_failure)")
+            println(f, "check_los: $(config.check_los)")
+            println(f, "timeout: $(config.timeout)")
+            println(f, "strategy: $(config.strategy)")
+            println(f, "custom_config: $(config.custom_config)")
+        end
+
+        new(log_directory)
+    end
+end
+
 struct Logger
     log_directory::String
 

@@ -1,8 +1,8 @@
 include("src/utils/include.jl")
 
-import .Types: WorldState, AgentState, Logger, DummyNode, Config
+import .Types: WorldState, AgentState, afLogger, Logger, DummyNode, Config
 import .World: create_world, world_step, stop_world
-import .LogWriter: log
+import .LogWriter: log, af_log
 import .WorldRenderer: create_window, update_window!, close_window
 import .AgentHandler: spawn_agents, step_agents!
 import .ConfigLoader: load_configs
@@ -44,6 +44,7 @@ function main(args)
             actual_speedup = speedup
             gtk_running = true
             if cf.do_log
+                # af_logger = afLogger(cf, i)
                 logger = Logger(cf)
                 log_frequency = 1
             end
@@ -63,6 +64,7 @@ function main(args)
                         if cf.do_log && step % log_frequency == 0 
                             log(world, logger, step)
                             log(agents, logger, step)
+                            # af_log(agents, world, af_logger, step)
                         end
                     end
 
@@ -77,7 +79,8 @@ function main(args)
             end
 
             # sleep(max(1.1 - full_t, 0))
-            println(full_t)
+            println("Stopping world after $(full_t) seconds")
+            # println(full_t)
 
             stop_world()
         end

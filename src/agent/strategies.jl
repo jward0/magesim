@@ -1,3 +1,41 @@
+"""
+    make_decisions_RAND!(agent::AgentState)
+
+Does RAND (avoidant)
+"""
+function make_decisions_RAND!(agent::AgentState)
+
+    message_received = false
+
+    if isempty(agent.action_queue)
+
+        targets = get_neighbours(agent.graph_position, agent.world_state_belief, true)
+
+        l = copy(agent.values.idleness_log) .* 0.0
+
+        for ndx in [a for a in agent.values.other_targets if a > 0]
+            l[ndx] = -1.0
+        end
+
+        target_idlenesses = l[targets]
+
+        # Add noise for randomness
+        target_idlenesses .+= (rand(length(target_idlenesses)) ./ 100)
+        target = targets[argmax(target_idlenesses)]
+
+        enqueue!(agent.action_queue, MoveToAction(target))
+        enqueue!(agent.outbox, IdlenessLogMessage(agent, nothing, agent.values.idleness_log))
+        enqueue!(agent.outbox, GoingToMessage(agent, nothing, target))
+
+        agent.values.current_target = target
+
+        if agent.graph_position isa Int64
+            agent.values.departed_time = agent.world_state_belief.time
+        end
+
+    end
+end
+
 function visit_maximisation!(agent::AgentState)
 
     if isempty(agent.action_queue)
@@ -38,7 +76,21 @@ function make_decisions_CRA!(agent::AgentState)
 
     if isempty(agent.action_queue)
 
-        target = do_sebs_style(agent, agent.values.idleness_log)
+        targets = get_neighbours(agent.graph_position, agent.world_state_belief, true)
+
+        l = copy(agent.values.idleness_log)
+
+        for ndx in [a for a in agent.values.other_targets if a > 0]
+            l[ndx] = -1.0
+        end
+
+        target_idlenesses = l[targets]
+
+        # Add noise for tiebreaks
+        target_idlenesses .+= (rand(length(target_idlenesses)) ./ 100)
+        target = targets[argmax(target_idlenesses)]
+
+        # target = do_sebs_style(agent, agent.values.idleness_log)
 
         enqueue!(agent.action_queue, MoveToAction(target))
 
@@ -147,17 +199,17 @@ function forward_nn(input)
 
 end
 
-# Candidate p
+# ?????????????????
 function sd_1(input)
 
     out = zeros(Float64, (size(input)[1], 4))
 
     for i in 1:size(input)[1]
         d = input[i, :]
-        out[i, 1] =  0.32799476 * d[1] +  0.42836051 * d[2]
-        out[i, 2] = -0.27840284 * d[1] + -1.03966187 * d[2]
-        out[i, 3] = -2.14337451 * d[1] +  0.11616698 * d[2]
-        out[i, 4] = -0.99945436 * d[1] + -0.90525171 * d[2]
+        out[i, 1] =  0.39542921 * d[1] + -0.65675830 * d[2]
+        out[i, 2] =  1.04956550 * d[1] + -2.41169670 * d[2]
+        out[i, 3] = -1.76400600 * d[1] + -1.35503092 * d[2]
+        out[i, 4] =  0.35702324 * d[1] + -0.21459921 * d[2]
     end
 
     return leakyrelu(out, 0.3)
@@ -169,7 +221,7 @@ function sd_out(input)
 
     for i in 1:size(input)[1]
         d = input[i, :]
-        out[i] = 1.2784934 * d[1] + -1.32684055 * d[2] + 2.28593493 * d[3] + 0.77020878 * d[4]
+        out[i] = 1.23378153 * d[1] + -1.74570142 * d[2] + 1.67926374 * d[3] + 1.03526079 * d[4]
     end
 
     return leakyrelu(out, 0.3)
@@ -182,12 +234,12 @@ function nd_1(input)
     for i in 1:size(input)[1]
         for j in 1:size(input)[2]
             d = input[i, j, :]
-            out[i, j, 1] = -0.79343972 * d[1] +  1.31276063 * d[2] +  0.44181687 * d[3]
-            out[i, j, 2] = -0.24341169 * d[1] +  2.32866916 * d[2] +  0.11335441 * d[3]
-            out[i, j, 3] = -0.67571924 * d[1] + -1.08829292 * d[2] +  0.66480484 * d[3]
-            out[i, j, 4] = -0.04343144 * d[1] + -1.24084405 * d[2] +  0.69653756 * d[3]
-            out[i, j, 5] = -0.16365868 * d[1] +  0.32452302 * d[2] +  0.2104867  * d[3]
-            out[i, j, 6] =  0.65356036 * d[1] +  0.2377102  * d[2] +  0.4955258  * d[3]
+            out[i, j, 1] =  0.01888764 * d[1] + -0.45915342 * d[2] + -0.47627992 * d[3]
+            out[i, j, 2] =  0.37894088 * d[1] +  0.84592537 * d[2] +  0.03730955 * d[3]
+            out[i, j, 3] = -0.47623729 * d[1] + -0.48666733 * d[2] +  0.58645635 * d[3]
+            out[i, j, 4] = -0.26577757 * d[1] + -0.49801225 * d[2] + -0.00811519 * d[3]
+            out[i, j, 5] =  0.57938169 * d[1] +  1.04516341 * d[2] + -0.19110703 * d[3]
+            out[i, j, 6] = -0.13873973 * d[1] + -0.50178453 * d[2] + -0.94114514 * d[3]
         end
     end
 
@@ -201,7 +253,7 @@ function nd_out(input)
     for i in 1:size(input)[1]
         for j in 1:size(input)[2]
             d = input[i, j, :]
-            out[i, j] = -0.66478846 * d[1] + -2.07131517 * d[2] + 1.27891665 * d[3] + 1.37051785 * d[4] + -0.68602119 * d[5] + -1.08835212 * d[6]
+            out[i, j] = -1.12949772 * d[1] + 1.03677392 * d[2] + -1.21275977 * d[3] + -0.05812893 * d[4] + -1.04156908 * d[5] + 0.77585069 * d[6]
         end
     end
 
@@ -209,11 +261,11 @@ function nd_out(input)
 end
 
 function c0(input)
-    return -2.43062395 * input
+    return -0.62272069 * input
 end
 
 function c1(input)
-    return 0.15660883 * input
+    return -0.04584406 * input
 end
 
 function do_sebs_style(agent::AgentState, self_priorities::Array{Float64, 1})

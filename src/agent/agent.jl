@@ -249,24 +249,31 @@ function make_decisions!(agent::AgentState, agents::Vector{AgentState})
     # println("+++++++++++++++++++++++++++++++++++++++")
     # println(agent.world_state_belief.adj)
     # println(agent.values.secret_knowledge[floor(Integer, agent.world_state_belief.time)+1])
-
-    if agent.values.strategy == "SEBS"
-        make_decisions_SEBS!(agent)
-    elseif agent.values.strategy == "SPNS"
-        make_decisions_SPNS!(agent, "full")
-    elseif agent.values.strategy == "MNS"
-        make_decisions_SPNS!(agent, "minimal")
-    elseif agent.values.strategy == "ER"
-        make_decisions_ER!(agent)
-    elseif agent.values.strategy == "RHAUM"
-        make_decisions_RHAUM!(agent)
-    elseif agent.values.strategy == "DTAP"
-        make_decisions_DTAP!(agent, agents)
-    elseif agent.values.strategy == "CRA"
-        make_decisions_CRA!(agent)
-    elseif agent.values.strategy == "visitmaxing"
-        visit_maximisation!(agent)
+    do_flag = isempty(agent.action_queue)
+    t = @elapsed begin
+        if agent.values.strategy == "SEBS"
+            make_decisions_SEBS!(agent)
+        elseif agent.values.strategy == "SPNS"
+            make_decisions_SPNS!(agent, "full")
+        elseif agent.values.strategy == "MNS"
+            make_decisions_SPNS!(agent, "minimal")
+        elseif agent.values.strategy == "ER"
+            make_decisions_ER!(agent)
+        elseif agent.values.strategy == "RHAUM"
+            make_decisions_RHAUM!(agent)
+        elseif agent.values.strategy == "DTAP"
+            make_decisions_DTAP!(agent, agents)
+        elseif agent.values.strategy == "CRA"
+            make_decisions_CRA!(agent)
+        elseif agent.values.strategy == "RAND"
+            make_decisions_RAND!(agent)
+        elseif agent.values.strategy == "visitmaxing"
+            visit_maximisation!(agent)
+        end
     end
+    # if agent.id == 1 && do_flag
+    #     println(t)
+    # end
 end
 
 end

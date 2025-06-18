@@ -1,10 +1,39 @@
 module LogWriter
 
-import ..Types: Logger, WorldState, AgentState, Node
-import ..Utils: pos_distance
+import ..Types: afLogger, Logger, WorldState, AgentState, Node
+import ..Utils: pos_distance, get_distances
 using Graphs, SimpleWeightedGraphs
 using Dates
 
+function af_log(agents::Array{AgentState, 1}, world::WorldState, logger::afLogger, timestep::Int)
+
+    n_agents = length(agents)
+    n_nodes = world.n_nodes
+
+    # each element is the distance of each agent to every node
+    dists = [get_distances(agent, world) for agent in agents]
+    # each row is the distance of every agent to each node
+    transpose_dists = reduce(hcat, dists)
+
+    # Log agent-node distances
+    for node in 1:n_nodes
+        dist_fpath = "$(logger.log_directory)/distances/distances_$(node).csv"
+        contents = join(string.(transpose_dists[node, :]), ",")
+        write_csv_line(contents, dist_fpath)
+    end
+
+    # Log node idlenesses
+    idlenesses = [node.values.idleness for node in world.nodes if node isa Node]
+    id_fpath = "$(logger.log_directory)/idleness.csv" 
+    contents = join(string.(vcat([timestep], idlenesses)), ",")
+    write_csv_line(contents, id_fpath)
+
+    # Log agent positions
+    positions = vcat([[agent.position.x, agent.position.y] for agent in agents]...)
+    pos_fpath = "$(logger.log_directory)/position_log.csv"
+    contents = join(string.(vcat([timestep], positions)), ",")
+    write_csv_line(contents, pos_fpath)
+end
 """
     log(target::AgentState, logger::Logger, timestep::Int)
 
@@ -119,6 +148,14 @@ function make_line(timestep::Int, contents::Array{String, 1})
 end
 function make_line(timestep::String, contents::Array{String, 1})
     return join(vcat(timestep, contents), ',')
+end
+
+function write_csv_line(contents::String, fpath::String)
+    Base.Filesystem.touch(fpath)
+    open(fpath, "a") do file
+        write(file, contents)
+        write(file,"\n")
+    end
 end
 
 end
