@@ -233,6 +233,8 @@ function make_decisions!(agent::AgentState, agents::Vector{AgentState})
     if agent.values.dyn_mode != "nothing"
         wsb = agent.world_state_belief
         @reset wsb.adj=new_effective_adj
+        @reset wsb.paths=floyd_warshall_shortest_paths(SimpleWeightedDiGraph(new_effective_adj))
+        # println(wsb.paths.dists)
         agent.world_state_belief = wsb
     end
 

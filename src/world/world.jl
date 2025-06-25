@@ -76,15 +76,16 @@ function create_world(config::Config)
         # Bristol bits
         # adj = convert(Matrix{Float64}, load("bristol_3_base_adj.jld")["data"])
         # adj = convert(Matrix{Float64}, load("bristol_3_new_base.jld")["data"])
-        adj = convert(Matrix{Float64}, load("bristol_base_adj.jld")["data"])
+        adj = convert(Matrix{Float64}, load("bristol_3_base_adj.jld")["data"])
         # temporal_profiles = [1.0 ./ t for t in temporal_profiles]
     end
 
     if false
         # apply prior inaccuracy to adj belief
         Random.seed!(123)
-        d = Normal(1.0, 1.6)
-        td = truncated(d, 0.0, Inf)
+        std = 0.05
+        d = Normal(1.0, std)
+        td = truncated(d, 0.1, Inf)
         noise = rand(td, size(adj))
 
         for i in 1:size(adj)[1]
@@ -93,7 +94,14 @@ function create_world(config::Config)
             end
         end
 
-        adj .*= noise
+        # adj .*= noise
+
+        # TRYING THIS INSTEAD: NOISE ACTS ON TEMPORAL PROFILE, BELIEF IS CONSISTENT WITH UNNOISY
+
+        temporal_profiles = [noise for _ in 1:config.timeout]
+
+
+        # @reset world_state.paths=floyd_warshall_shortest_paths(SimpleWeightedDiGraph(ceil.(adj)))
 
         # Force all Random
 
@@ -108,7 +116,7 @@ function create_world(config::Config)
 
 
     # TEMP CEIL
-
+    @reset world_state.adj = adj
     @reset world_state.adj=ceil.(adj)
     @reset world_state.temporal_profiles=temporal_profiles
 

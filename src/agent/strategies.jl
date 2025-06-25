@@ -660,17 +660,23 @@ function make_decisions_DTAP!(agent::AgentState, agents::Vector{AgentState})
             # Spoof the bid collecting process by exposing all agents
             bids = [DTAP_calculate_bid(a, target) for a in agents]
 
+            # Spoof message failure probability
             message_failed = false
-
             for i in 1:length(agents)
-                if rand() < 1 - (1 - agent.values.comm_failure)^2 # One or both messages failed
-                    bids[i] =  ∞   
-                    message_failed = true                
+                if i != agent.id
+                    if rand() < 1 - (1 - agent.values.comm_failure)^2 # One or both messages failed
+                        bids[i] =  ∞   
+                        message_failed = true                
+                    end
+                    if pos_distance(agent.position, agents[i].position) > agent.comm_range
+                        bids[i] =  ∞   
+                        message_failed = true   
+                    end
                 end
             end
             # Provisional - have to think about how appropriate this is
             if message_failed
-                enqueue!(agent.action_queue, WaitAction(timeout))
+                # enqueue!(agent.action_queue, WaitAction(timeout))
             end
 
             # push!(agents[argmin(bids)].values.dtap_agent_tasks, target)
@@ -690,5 +696,9 @@ function make_decisions_DTAP!(agent::AgentState, agents::Vector{AgentState})
         end
 
         enqueue!(agent.outbox, IdlenessLogMessage(agent, nothing, agent.values.idleness_log))
+
+        if agent.graph_position isa Int64
+            agent.values.departed_time = agent.world_state_belief.time
+        end
     end
 end
